@@ -429,7 +429,7 @@ export async function getAllConnectedPagesAsync(): Promise<ConnectedPageRecord[]
       const pages = await withPrismaRetry((client) =>
         client.connectedPage.findMany({ orderBy: { updatedAt: 'desc' } }),
       );
-      return pages.map(mapConnectedPage);
+      if (pages.length > 0) return pages.map(mapConnectedPage);
     } catch (error: any) {
       console.warn('Không đọc được ConnectedPage từ Prisma, dùng JSON fallback:', error.message);
     }
@@ -536,7 +536,7 @@ export async function getFacebookPosts(pageId?: string): Promise<FacebookPostSto
         orderBy: { createdTime: 'desc' },
         take: 5000,
       }));
-      return posts.map((post) => ({
+      if (posts.length > 0) return posts.map((post) => ({
         id: post.postId,
         pageId: post.pageId,
         pageName: post.pageName,

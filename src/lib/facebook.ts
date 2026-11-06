@@ -65,7 +65,39 @@ export class FacebookService {
     }
 
     if (!isRealMetaToken(accessToken)) {
-      return [];
+      const now = Date.now();
+      return [
+        {
+          id: `${pageId}_mock_post_1`,
+          pageId,
+          pageName: '',
+          message: '[MÔ PHỎNG] Bài đăng mẫu để kiểm tra luồng chọn bài và tạo quảng cáo.',
+          createdTime: new Date(now - 86400000).toISOString(),
+          permalinkUrl: `https://facebook.com/${pageId}_mock_post_1`,
+          fullPicture: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=80',
+          statusType: 'mobile_status_update',
+          comments: 4,
+          reactions: 18,
+          shares: 2,
+          isMock: true,
+          syncedAt: new Date().toISOString(),
+        },
+        {
+          id: `${pageId}_mock_post_2`,
+          pageId,
+          pageName: '',
+          message: '[MÔ PHỎNG] Ưu đãi mới dành cho khách hàng của Fanpage.',
+          createdTime: new Date(now - 172800000).toISOString(),
+          permalinkUrl: `https://facebook.com/${pageId}_mock_post_2`,
+          fullPicture: 'https://images.unsplash.com/photo-1607083206968-13611e3d76db?auto=format&fit=crop&w=1200&q=80',
+          statusType: 'photo',
+          comments: 7,
+          reactions: 31,
+          shares: 5,
+          isMock: true,
+          syncedAt: new Date().toISOString(),
+        },
+      ];
     }
 
     const fields = [

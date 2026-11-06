@@ -31,6 +31,7 @@ export const FacebookPostsPanel: React.FC<FacebookPostsPanelProps> = ({ onCreate
   const [pageId, setPageId] = useState('');
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [creatingPostId, setCreatingPostId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   const loadPages = async (): Promise<PageItem[]> => {
@@ -83,6 +84,8 @@ export const FacebookPostsPanel: React.FC<FacebookPostsPanelProps> = ({ onCreate
   };
 
   const createDraftFromPost = async (post: PostItem) => {
+    setCreatingPostId(post.id);
+    setMessage('');
     try {
       const response = await fetch('/api/campaigns/from-post', {
         method: 'POST',
@@ -94,6 +97,8 @@ export const FacebookPostsPanel: React.FC<FacebookPostsPanelProps> = ({ onCreate
       onCreateAdDraft?.(data.campaign);
     } catch (error: any) {
       setMessage(error.message);
+    } finally {
+      setCreatingPostId(null);
     }
   };
 
@@ -135,10 +140,11 @@ export const FacebookPostsPanel: React.FC<FacebookPostsPanelProps> = ({ onCreate
                 <button
                   type="button"
                   data-testid={`create-ad-from-post-${post.id}`}
+                  disabled={creatingPostId !== null}
                   onClick={() => createDraftFromPost(post)}
-                  className="w-full mt-3 min-h-10 py-2.5 rounded-lg bg-emerald-600 text-white border border-emerald-400 text-sm font-bold shadow-lg shadow-emerald-950/40 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  className="w-full mt-3 min-h-10 py-2.5 rounded-lg bg-emerald-600 text-white border border-emerald-400 text-sm font-bold shadow-lg shadow-emerald-950/40 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60"
                 >
-                  Chọn bài này để quảng cáo
+                  {creatingPostId === post.id ? 'Đang tạo bản nháp...' : 'Chọn bài này để quảng cáo'}
                 </button>
               </div>
             </article>
