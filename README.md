@@ -50,7 +50,6 @@ TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 GEMINI_API_KEY=...
 META_API_MODE=MOCK
-CRON_SECRET=...
 ```
 
 `DATABASE_URL` và `DIRECT_URL` phải tồn tại vì Prisma schema dùng PostgreSQL. Không đặt
@@ -68,11 +67,10 @@ Màn hình chính có khu vực **Quản lý bài đăng Fanpage**. Chọn Fanpa
 bao giờ được trả về client. Dữ liệu bài đăng gồm nội dung, thời gian, ảnh đại diện, link
 Facebook và tổng số reactions/comments/shares.
 
-Vercel Cron gọi `GET /api/cron/facebook-posts` mỗi 15 phút theo [vercel.json](./vercel.json).
-Đặt `CRON_SECRET` là chuỗi ngẫu nhiên dài trong Vercel; request phải có header
-`Authorization: Bearer <CRON_SECRET>`. Meta App cần quyền đọc nội dung Page tương ứng và
-Page Access Token còn hạn. Nếu dùng môi trường local/mock, cron không tạo dữ liệu giả và
-chỉ đồng bộ khi token thật hợp lệ.
+Hệ thống không tự động gọi Facebook khi reload hoặc chạy nền. Khi mở lại trang, hệ thống chỉ
+đọc dữ liệu bài đăng đã lưu. Bấm **Đồng bộ** khi muốn chủ động gọi Facebook lấy dữ liệu mới.
+Meta App cần quyền đọc nội dung Page tương ứng và Page Access Token còn hạn. Nếu dùng môi
+trường local/mock, hệ thống không tạo dữ liệu giả và chỉ đồng bộ khi token thật hợp lệ.
 
 ### 1. Chạy trên máy cục bộ (Local Development)
 
