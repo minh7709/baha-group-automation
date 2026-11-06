@@ -116,17 +116,15 @@ export async function GET(req: Request) {
       }
       facebookUser = meData;
 
-      if (oauthScope === 'pages') {
-        // Chỉ gọi /me/accounts khi người dùng chọn luồng Fanpage.
-        const accountsUrl = `https://graph.facebook.com/${apiVersion}/me/accounts?fields=id,name,category,access_token&access_token=${longLivedUserToken}`;
-        const accountsRes = await fetch(accountsUrl);
-        const accountsData = await accountsRes.json();
-
-        if (!accountsRes.ok || accountsData.error) {
-          throw new Error(accountsData.error?.message || 'Không thể đọc danh sách Fanpage từ tài khoản');
-        }
-
+      // Thử lấy Page ngay sau OAuth. Với public_profile-only token, Meta có thể
+      // từ chối; khi đó vẫn hoàn tất đăng nhập và cho phép người dùng cấp token Page riêng.
+      const accountsUrl = `https://graph.facebook.com/${apiVersion}/me/accounts?fields=id,name,category,access_token&access_token=${longLivedUserToken}`;
+      const accountsRes = await fetch(accountsUrl);
+      const accountsData = await accountsRes.json();
+      if (accountsRes.ok && !accountsData.error) {
         pages = accountsData.data || [];
+      } else if (oauthScope === 'pages') {
+        throw new Error(accountsData.error?.message || 'Không thể đọc danh sách Fanpage từ tài khoản');
       }
     }
 

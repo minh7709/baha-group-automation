@@ -45,6 +45,7 @@ export const FacebookPublishModal: React.FC<FacebookPublishModalProps> = ({
   // Tải danh sách Fanpage đã kết nối qua OAuth
   const loadPages = async () => {
     try {
+      await fetch('/api/facebook/pages/sync', { method: 'POST' }).catch(() => undefined);
       const res = await fetch('/api/pages');
       const data = await res.json();
       if (data.success && data.pages) {
@@ -406,4 +407,3 @@ export const FacebookPublishModal: React.FC<FacebookPublishModalProps> = ({
     </div>
   );
 };
-

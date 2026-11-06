@@ -31,14 +31,21 @@ export async function GET(req: Request) {
     return response;
   }
 
+  if (scopeType === 'pages' && !loginConfigId) {
+    const errorUrl = new URL('/', req.url);
+    errorUrl.searchParams.set('status', 'error');
+    errorUrl.searchParams.set(
+      'message',
+      'OAuth Fanpage chưa được cấu hình META_OAUTH_CONFIG_ID. Hãy tạo Facebook Login for Business Configuration trong Meta Developer Dashboard.'
+    );
+    return NextResponse.redirect(errorUrl.toString());
+  }
+
   // Chỉ yêu cầu quyền đã được cấu hình cho Use Case tương ứng trên Meta.
   // `email` không bắt buộc để kết nối Fanpage và thường gây Invalid Scopes
   // khi app chưa bật Facebook Login với quyền email.
   let scopes = 'public_profile';
-  if (scopeType === 'pages') {
-    scopes = process.env.META_OAUTH_PAGES_SCOPES
-      || 'pages_show_list,pages_read_engagement,pages_manage_posts';
-  } else if (scopeType === 'ads') {
+  if (scopeType === 'ads') {
     scopes = process.env.META_OAUTH_ADS_SCOPES || 'ads_management,ads_read';
   }
 
@@ -47,13 +54,17 @@ export async function GET(req: Request) {
     redirect_uri: redirectUri,
     state: state,
     response_type: 'code',
-    scope: scopes,
   };
+
+  if (scopeType !== 'pages' || !loginConfigId) {
+    authParams.scope = scopes;
+  }
 
   // Facebook Login for Business dùng config_id để áp dụng cấu hình quyền
   // đã tạo trong Meta App Dashboard. Không gửi nếu app dùng Login thường.
-  if (loginConfigId) {
+  if (scopeType === 'pages' && loginConfigId) {
     authParams.config_id = loginConfigId;
+    authParams.override_default_response_type = 'true';
   }
 
   const fbAuthUrl = `https://www.facebook.com/${apiVersion}/dialog/oauth?`

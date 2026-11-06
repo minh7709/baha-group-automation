@@ -61,6 +61,13 @@ database provider; nếu provider không yêu cầu URL riêng, đặt cùng gi�
 Redirect URIs trong Meta Developer Dashboard. Sau khi thay đổi Environment Variables, cần
 redeploy để Vercel chạy lại bước `prisma generate && next build`.
 
+Đối với nút **OAuth Thật (Quyền Fanpage)**, bắt buộc tạo một **Facebook Login for Business
+Configuration** trong Meta Developer Dashboard và đặt ID của configuration vào
+`META_OAUTH_CONFIG_ID`. Luồng này truyền `config_id` cho Meta và không tự gửi chuỗi scope
+Pages cũ từ `.env`; các quyền phải được chọn bên trong configuration. Nếu chưa có
+`META_OAUTH_CONFIG_ID`, hệ thống sẽ dừng trước khi redirect và hiển thị hướng dẫn thay vì
+gây lỗi `Invalid Scopes`.
+
 ### Đăng nhập Facebook và giới hạn dữ liệu profile
 
 Nút **Đăng nhập bằng Facebook OAuth 2.0** dùng luồng `basic` với scope ổn định

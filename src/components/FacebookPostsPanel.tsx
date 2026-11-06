@@ -30,6 +30,7 @@ export const FacebookPostsPanel: React.FC = () => {
   const [message, setMessage] = useState('');
 
   const loadPages = async (): Promise<PageItem[]> => {
+    await fetch('/api/facebook/pages/sync', { method: 'POST' }).catch(() => undefined);
     const res = await fetch('/api/pages');
     const data = await res.json();
     if (!res.ok || !data.success) {

@@ -320,7 +320,7 @@ export const ConnectedPagesModal: React.FC<ConnectedPagesModalProps> = ({
                 <span>Tại sao Meta báo lỗi "Invalid Scopes: pages_show_list, pages_manage_posts"?</span>
               </div>
               <p>
-                Meta yêu cầu ứng dụng phải bật mục <strong>Facebook Login for Business</strong> trong Meta Developer Dashboard. Nếu App của bạn là App cá nhân thử nghiệm, hãy bấm tab <strong>"Nhập Token Explorer"</strong> ở trên để nạp trang thật ngay lập tức mà không cần xét duyệt App!
+                OAuth Fanpage cần <strong>Facebook Login for Business Configuration</strong> và biến <strong>META_OAUTH_CONFIG_ID</strong>. Nếu chưa cấu hình, hãy dùng tab <strong>"Nhập Token Explorer"</strong> để nạp Page Token thật trong lúc thiết lập Meta App.
               </p>
             </div>
           </div>
