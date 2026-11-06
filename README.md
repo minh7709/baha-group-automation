@@ -50,6 +50,7 @@ TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 GEMINI_API_KEY=...
 META_API_MODE=MOCK
+CRON_SECRET=...
 ```
 
 `DATABASE_URL` và `DIRECT_URL` phải tồn tại vì Prisma schema dùng PostgreSQL. Không đặt
@@ -59,6 +60,19 @@ database provider; nếu provider không yêu cầu URL riêng, đặt cùng gi�
 `META_REDIRECT_URI` phải là URL HTTPS production chính xác và phải được thêm vào Valid OAuth
 Redirect URIs trong Meta Developer Dashboard. Sau khi thay đổi Environment Variables, cần
 redeploy để Vercel chạy lại bước `prisma generate && next build`.
+
+### Đồng bộ bài đăng Facebook tự động
+
+Màn hình chính có khu vực **Quản lý bài đăng Fanpage**. Chọn Fanpage đã liên kết và bấm
+**Đồng bộ** để gọi `/{page-id}/posts` bằng Page Access Token lưu phía server. Token không
+bao giờ được trả về client. Dữ liệu bài đăng gồm nội dung, thời gian, ảnh đại diện, link
+Facebook và tổng số reactions/comments/shares.
+
+Vercel Cron gọi `GET /api/cron/facebook-posts` mỗi 15 phút theo [vercel.json](./vercel.json).
+Đặt `CRON_SECRET` là chuỗi ngẫu nhiên dài trong Vercel; request phải có header
+`Authorization: Bearer <CRON_SECRET>`. Meta App cần quyền đọc nội dung Page tương ứng và
+Page Access Token còn hạn. Nếu dùng môi trường local/mock, cron không tạo dữ liệu giả và
+chỉ đồng bộ khi token thật hợp lệ.
 
 ### 1. Chạy trên máy cục bộ (Local Development)
 
@@ -123,4 +137,3 @@ Dự án sử dụng Next.js App Router fullstack chuẩn, sẵn sàng deploy 1-
 - Người dùng chỉ cần bấm nút **"Kết nối Facebook"**, cấp quyền `pages_show_list`, `pages_manage_posts`, hệ thống tự động đổi Long-lived User Token thành Page Access Token vĩnh viễn (Never Expire).
 - Khách hàng không bao giờ phải tự lấy access token thủ công.
 - Hỗ trợ chế độ Test Mô Phỏng (**OAuth Mock Mode**) giúp test ngay lập tức mà không cần tài khoản Meta Verified App.
-

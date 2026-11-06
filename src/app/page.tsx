@@ -11,6 +11,7 @@ import { PilotLaunchCenter } from '@/components/PilotLaunchCenter';
 import { AuthModal } from '@/components/AuthModal';
 import { FacebookPublishModal } from '@/components/FacebookPublishModal';
 import { ConnectedPagesModal } from '@/components/ConnectedPagesModal';
+import { FacebookPostsPanel } from '@/components/FacebookPostsPanel';
 import { CampaignData } from '@/lib/types';
 import { MANDATORY_DEMO_SCENARIO } from '@/lib/default-scenarios';
 import { Sparkles, Layers, List, CheckCircle2, AlertOctagon, UserCheck, Globe, Link2 } from 'lucide-react';
@@ -425,6 +426,8 @@ export default function HomePage() {
               }}
               otherDraftsCount={Math.max(0, campaigns.filter((c) => c.status === 'DRAFT').length - 1)}
             />
+
+            <FacebookPostsPanel />
 
             {/* Recent Campaigns Overview */}
             <div className="space-y-3">

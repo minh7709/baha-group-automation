@@ -8,6 +8,7 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'campaigns.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PAGES_FILE = path.join(DATA_DIR, 'connected_pages.json');
+const POSTS_FILE = path.join(DATA_DIR, 'facebook_posts.json');
 
 export interface UserRecord {
   id: string;
@@ -32,6 +33,22 @@ export interface ConnectedPageRecord {
   userId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FacebookPostStorageRecord {
+  id: string;
+  pageId: string;
+  pageName: string;
+  message: string;
+  createdTime: string;
+  permalinkUrl?: string;
+  fullPicture?: string;
+  statusType?: string;
+  comments: number;
+  reactions: number;
+  shares: number;
+  isMock: boolean;
+  syncedAt: string;
 }
 
 function ensureDataFiles() {
@@ -88,6 +105,9 @@ function ensureDataFiles() {
       },
     ];
     fs.writeFileSync(PAGES_FILE, JSON.stringify(defaultPages, null, 2), 'utf-8');
+  }
+  if (!fs.existsSync(POSTS_FILE)) {
+    fs.writeFileSync(POSTS_FILE, '[]', 'utf-8');
   }
 }
 
@@ -365,7 +385,96 @@ export function deleteConnectedPage(id: string): boolean {
       prisma.connectedPage.deleteMany({ where: { OR: [{ id }, { pageId: id }] } })
         .catch((e: any) => console.warn('Lỗi xóa Prisma ConnectedPage:', e.message));
     }
+
     return true;
   }
   return false;
+}
+
+export async function getFacebookPosts(pageId?: string): Promise<FacebookPostStorageRecord[]> {
+  ensureDataFiles();
+  const prisma = getPrisma();
+  if (prisma) {
+    try {
+      const posts = await prisma.facebookPost.findMany({
+        where: pageId ? { pageId } : undefined,
+        orderBy: { createdTime: 'desc' },
+        take: 5000,
+      });
+      return posts.map((post) => ({
+        id: post.postId,
+        pageId: post.pageId,
+        pageName: post.pageName,
+        message: post.message,
+        createdTime: post.createdTime.toISOString(),
+        permalinkUrl: post.permalinkUrl || undefined,
+        fullPicture: post.fullPicture || undefined,
+        statusType: post.statusType || undefined,
+        comments: post.comments,
+        reactions: post.reactions,
+        shares: post.shares,
+        isMock: post.isMock,
+        syncedAt: post.syncedAt.toISOString(),
+      }));
+    } catch (err) {
+      console.warn('Không đọc được FacebookPost từ Prisma, dùng JSON fallback:', (err as any).message);
+    }
+  }
+  try {
+    const posts = JSON.parse(fs.readFileSync(POSTS_FILE, 'utf-8')) as FacebookPostStorageRecord[];
+    return pageId ? posts.filter((post) => post.pageId === pageId) : posts;
+  } catch (err) {
+    console.error('Lỗi đọc bài đăng Facebook:', err);
+    return [];
+  }
+}
+
+export async function saveFacebookPosts(posts: FacebookPostStorageRecord[]): Promise<FacebookPostStorageRecord[]> {
+  ensureDataFiles();
+  const existing = await getFacebookPosts();
+  const byId = new Map(existing.map((post) => [post.id, post]));
+  posts.forEach((post) => byId.set(post.id, post));
+  const merged = Array.from(byId.values())
+    .sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime())
+    .slice(0, 5000);
+  fs.writeFileSync(POSTS_FILE, JSON.stringify(merged, null, 2), 'utf-8');
+  const prisma = getPrisma();
+  if (prisma) {
+    try {
+      await Promise.all(posts.map((post) => prisma.facebookPost.upsert({
+        where: { pageId_postId: { pageId: post.pageId, postId: post.id } },
+        update: {
+          pageName: post.pageName,
+          message: post.message,
+          createdTime: new Date(post.createdTime),
+          permalinkUrl: post.permalinkUrl || null,
+          fullPicture: post.fullPicture || null,
+          statusType: post.statusType || null,
+          comments: post.comments,
+          reactions: post.reactions,
+          shares: post.shares,
+          isMock: post.isMock,
+          syncedAt: new Date(post.syncedAt),
+        },
+        create: {
+          postId: post.id,
+          pageId: post.pageId,
+          pageName: post.pageName,
+          message: post.message,
+          createdTime: new Date(post.createdTime),
+          permalinkUrl: post.permalinkUrl || null,
+          fullPicture: post.fullPicture || null,
+          statusType: post.statusType || null,
+          comments: post.comments,
+          reactions: post.reactions,
+          shares: post.shares,
+          isMock: post.isMock,
+          syncedAt: new Date(post.syncedAt),
+        },
+      })));
+    } catch (err) {
+      console.warn('Lỗi ghi FacebookPost vào Prisma:', (err as any).message);
+    }
+  }
+  return posts;
 }

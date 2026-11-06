@@ -19,6 +19,22 @@ export interface PostResult {
   error?: string;
 }
 
+export interface FacebookPostRecord {
+  id: string;
+  pageId: string;
+  pageName: string;
+  message: string;
+  createdTime: string;
+  permalinkUrl?: string;
+  fullPicture?: string;
+  statusType?: string;
+  comments: number;
+  reactions: number;
+  shares: number;
+  isMock: boolean;
+  syncedAt: string;
+}
+
 /**
  * Kiểm tra xem token có phải là token thật của Meta hay chỉ là token mô phỏng (Mock)
  */
@@ -41,6 +57,55 @@ export class FacebookService {
     this.defaultPageId = process.env.FB_PAGE_ID || '';
     this.defaultAccessToken = process.env.FB_PAGE_ACCESS_TOKEN || '';
     this.apiVersion = process.env.FB_GRAPH_VERSION || 'v21.0';
+  }
+
+  async listPagePosts(pageId: string, accessToken: string, limit = 25): Promise<FacebookPostRecord[]> {
+    if (!pageId || !accessToken) {
+      throw new Error('Thiếu Page ID hoặc Page Access Token để đồng bộ bài đăng.');
+    }
+
+    if (!isRealMetaToken(accessToken)) {
+      return [];
+    }
+
+    const fields = [
+      'id',
+      'message',
+      'created_time',
+      'permalink_url',
+      'full_picture',
+      'status_type',
+      'shares',
+      'comments.limit(0).summary(true)',
+      'reactions.limit(0).summary(true)',
+    ].join(',');
+    const url = `https://graph.facebook.com/${this.apiVersion}/${pageId}/posts?${new URLSearchParams({
+      fields,
+      limit: String(Math.min(Math.max(limit, 1), 100)),
+      access_token: accessToken,
+    })}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error(data.error?.message || 'Không thể lấy bài đăng từ Facebook Graph API.');
+    }
+
+    return (data.data || []).map((post: any) => ({
+      id: post.id,
+      pageId,
+      pageName: '',
+      message: post.message || '',
+      createdTime: post.created_time,
+      permalinkUrl: post.permalink_url,
+      fullPicture: post.full_picture,
+      statusType: post.status_type,
+      comments: Number(post.comments?.summary?.total_count || 0),
+      reactions: Number(post.reactions?.summary?.total_count || 0),
+      shares: Number(post.shares?.count || 0),
+      isMock: false,
+      syncedAt: new Date().toISOString(),
+    }));
   }
 
   /**
@@ -214,4 +279,3 @@ export class FacebookService {
     );
   }
 }
-

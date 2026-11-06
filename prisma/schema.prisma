@@ -40,6 +40,26 @@ model ConnectedPage {
   @@unique([userId, pageId]) // Đảm bảo 1 user không lưu trùng 1 page 2 lần
 }
 
+model FacebookPost {
+  id           String        @id @default(cuid())
+  postId       String
+  pageId       String
+  pageName     String
+  message      String        @default("")
+  createdTime  DateTime
+  permalinkUrl String?
+  fullPicture  String?
+  statusType   String?
+  comments     Int           @default(0)
+  reactions    Int           @default(0)
+  shares       Int           @default(0)
+  isMock       Boolean       @default(false)
+  syncedAt     DateTime      @default(now())
+
+  @@unique([pageId, postId])
+  @@index([pageId, createdTime])
+}
+
 model Campaign {
   id                String     @id @default(cuid())
   userId            String?
