@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { FacebookService } from '@/lib/facebook';
 import { getCampaignById, saveCampaign, getConnectedPageById } from '@/lib/storage';
+import { decryptToken } from '@/lib/crypto';
+import { NotificationService } from '@/lib/notifications/notification-service';
 
 export async function POST(req: Request) {
   try {
@@ -32,7 +34,7 @@ export async function POST(req: Request) {
       const pageRecord = getConnectedPageById(pageId);
       if (pageRecord) {
         if (!effectiveToken && pageRecord.pageAccessToken) {
-          effectiveToken = pageRecord.pageAccessToken;
+          effectiveToken = decryptToken(pageRecord.pageAccessToken);
         }
         pageName = pageRecord.pageName;
       }
@@ -89,36 +91,18 @@ export async function POST(req: Request) {
       }
     }
 
-    // Bắn thông báo Telegram thật nếu có token/chatId
-    const effectiveTeleToken = botToken || process.env.TELEGRAM_BOT_TOKEN;
-    const effectiveTeleChatId = chatId || process.env.TELEGRAM_CHAT_ID;
-    if (effectiveTeleToken && effectiveTeleChatId) {
-      try {
-        const text = `
-📢 *[BAHA ADS] ĐÃ ĐĂNG BÀI LÊN FANPAGE (${pageName})*
-━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 *Nội dung:* ${message.slice(0, 100)}...
-🆔 *Post ID:* \`${result.postId}\`
-⚡ *Trạng thái:* ${result.isMock ? 'Mô phỏng chuẩn Meta v21.0' : 'Đã đăng trực tiếp lên Fanpage'}
-🌐 *Link bài viết:* ${result.postUrl}
-⏰ *Hẹn giờ:* ${parsedScheduledTime ? new Date(parsedScheduledTime * 1000).toLocaleString('vi-VN') : 'Đăng ngay lập tức'}
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🔔 _Đăng bài tự nhiên (Organic) hoàn toàn 0đ, không phát sinh chi phí quảng cáo._
-        `.trim();
-
-        await fetch(`https://api.telegram.org/bot${effectiveTeleToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: effectiveTeleChatId,
-            text,
-            parse_mode: 'Markdown',
-          }),
-        });
-      } catch (e) {
-        console.warn('Lỗi bắn Telegram khi đăng bài:', e);
-      }
-    }
+    // Bắn thông báo Telegram an toàn qua NotificationService
+    const notifier = new NotificationService({ botToken, chatId });
+    await notifier.sendEvent('FANPAGE_POST_PUBLISHED', {
+      details: {
+        message,
+        postId: result.postId,
+        postUrl: result.postUrl,
+        scheduledTime: parsedScheduledTime,
+        isMock: result.isMock,
+        pageName,
+      },
+    });
 
     return NextResponse.json({
       success: true,

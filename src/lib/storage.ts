@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { CampaignData } from './types';
 import { INITIAL_CAMPAIGNS } from './default-scenarios';
+import { prisma } from './prisma';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'campaigns.json');
@@ -119,6 +120,89 @@ export function saveCampaign(campaign: CampaignData): CampaignData {
   }
 
   fs.writeFileSync(DATA_FILE, JSON.stringify(campaigns, null, 2), 'utf-8');
+
+  // Đồng bộ thời gian thực vào SQLite via Prisma (Không dùng mock)
+  if (prisma) {
+    prisma.campaign.upsert({
+      where: { id: campaign.id },
+      update: {
+        code: campaign.code,
+        name: campaign.name,
+        description: campaign.description || null,
+        imageUrl: campaign.imageUrl || null,
+        objective: campaign.objective,
+        objectiveText: campaign.objectiveText,
+        specialCategory: campaign.specialCategory || 'NONE',
+        location: campaign.location,
+        radiusKm: Number(campaign.radiusKm || 15),
+        targetAge: campaign.targetAge || '25 - 45',
+        targetGender: campaign.targetGender || 'ALL',
+        targetInterests: JSON.stringify(campaign.targetInterests || []),
+        dailyBudget: Number(campaign.dailyBudget),
+        durationDays: Number(campaign.durationDays),
+        totalBudget: Number(campaign.totalBudget),
+        maxEstimatedSpend: Number(campaign.maxEstimatedSpend),
+        startDate: new Date(campaign.startDate || Date.now()),
+        endDate: new Date(campaign.endDate || Date.now()),
+        headline: campaign.headline,
+        primaryText: campaign.primaryText,
+        callToAction: campaign.callToAction || 'SEND_MESSAGE',
+        pageName: campaign.pageName,
+        status: campaign.status,
+        version: Number(campaign.version || 1),
+        approvalCode: campaign.approvalCode || null,
+        fingerprint: campaign.fingerprint || null,
+        approvedBy: campaign.approvedBy || null,
+        approvedAt: campaign.approvedAt ? new Date(campaign.approvedAt) : null,
+        metaCampaignId: campaign.metaCampaignId || null,
+        metaAdSetId: campaign.metaAdSetId || null,
+        metaCreativeId: campaign.metaCreativeId || null,
+        metaAdId: campaign.metaAdId || null,
+        isMock: Boolean(campaign.isMock),
+        telegramSent: Boolean(campaign.telegramSent),
+        telegramSentAt: campaign.telegramSentAt ? new Date(campaign.telegramSentAt) : null,
+      },
+      create: {
+        id: campaign.id,
+        code: campaign.code,
+        name: campaign.name,
+        description: campaign.description || null,
+        imageUrl: campaign.imageUrl || null,
+        objective: campaign.objective,
+        objectiveText: campaign.objectiveText,
+        specialCategory: campaign.specialCategory || 'NONE',
+        location: campaign.location,
+        radiusKm: Number(campaign.radiusKm || 15),
+        targetAge: campaign.targetAge || '25 - 45',
+        targetGender: campaign.targetGender || 'ALL',
+        targetInterests: JSON.stringify(campaign.targetInterests || []),
+        dailyBudget: Number(campaign.dailyBudget),
+        durationDays: Number(campaign.durationDays),
+        totalBudget: Number(campaign.totalBudget),
+        maxEstimatedSpend: Number(campaign.maxEstimatedSpend),
+        startDate: new Date(campaign.startDate || Date.now()),
+        endDate: new Date(campaign.endDate || Date.now()),
+        headline: campaign.headline,
+        primaryText: campaign.primaryText,
+        callToAction: campaign.callToAction || 'SEND_MESSAGE',
+        pageName: campaign.pageName,
+        status: campaign.status,
+        version: Number(campaign.version || 1),
+        approvalCode: campaign.approvalCode || null,
+        fingerprint: campaign.fingerprint || null,
+        approvedBy: campaign.approvedBy || null,
+        approvedAt: campaign.approvedAt ? new Date(campaign.approvedAt) : null,
+        metaCampaignId: campaign.metaCampaignId || null,
+        metaAdSetId: campaign.metaAdSetId || null,
+        metaCreativeId: campaign.metaCreativeId || null,
+        metaAdId: campaign.metaAdId || null,
+        isMock: Boolean(campaign.isMock),
+        telegramSent: Boolean(campaign.telegramSent),
+        telegramSentAt: campaign.telegramSentAt ? new Date(campaign.telegramSentAt) : null,
+      },
+    }).catch((e: any) => console.warn('Lỗi ghi Prisma Campaign:', e.message));
+  }
+
   return campaign;
 }
 
@@ -128,6 +212,10 @@ export function deleteCampaign(id: string): boolean {
   const filtered = campaigns.filter((c) => c.id !== id && c.code !== id);
   if (filtered.length !== campaigns.length) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    if (prisma) {
+      prisma.campaign.deleteMany({ where: { OR: [{ id }, { code: id }] } })
+        .catch((e: any) => console.warn('Lỗi xóa Prisma Campaign:', e.message));
+    }
     return true;
   }
   return false;
@@ -167,6 +255,33 @@ export function saveUser(user: UserRecord): UserRecord {
   }
 
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+
+  // Đồng bộ User vào SQLite via Prisma
+  if (prisma) {
+    prisma.user.upsert({
+      where: { id: user.id },
+      update: {
+        email: user.email,
+        name: user.name,
+        passwordHash: user.passwordHash,
+        role: user.role,
+        emailVerified: user.emailVerified,
+        verificationToken: user.verificationToken || null,
+        tokenExpiry: user.tokenExpiry ? new Date(user.tokenExpiry) : null,
+      },
+      create: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        passwordHash: user.passwordHash,
+        role: user.role,
+        emailVerified: user.emailVerified,
+        verificationToken: user.verificationToken || null,
+        tokenExpiry: user.tokenExpiry ? new Date(user.tokenExpiry) : null,
+      },
+    }).catch((e: any) => console.warn('Lỗi ghi Prisma User:', e.message));
+  }
+
   return user;
 }
 
@@ -207,6 +322,31 @@ export function saveConnectedPage(page: ConnectedPageRecord): ConnectedPageRecor
   }
 
   fs.writeFileSync(PAGES_FILE, JSON.stringify(pages, null, 2), 'utf-8');
+
+  // Đồng bộ ConnectedPage vào SQLite via Prisma
+  if (prisma) {
+    prisma.connectedPage.upsert({
+      where: { id: page.id },
+      update: {
+        pageId: page.pageId,
+        pageName: page.pageName,
+        pageCategory: page.pageCategory || null,
+        pageAccessToken: page.pageAccessToken,
+        instagramId: page.instagramId || null,
+        userId: page.userId,
+      },
+      create: {
+        id: page.id,
+        pageId: page.pageId,
+        pageName: page.pageName,
+        pageCategory: page.pageCategory || null,
+        pageAccessToken: page.pageAccessToken,
+        instagramId: page.instagramId || null,
+        userId: page.userId,
+      },
+    }).catch((e: any) => console.warn('Lỗi ghi Prisma ConnectedPage:', e.message));
+  }
+
   return page;
 }
 
@@ -216,6 +356,10 @@ export function deleteConnectedPage(id: string): boolean {
   const filtered = pages.filter((p) => p.id !== id && p.pageId !== id);
   if (filtered.length !== pages.length) {
     fs.writeFileSync(PAGES_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    if (prisma) {
+      prisma.connectedPage.deleteMany({ where: { OR: [{ id }, { pageId: id }] } })
+        .catch((e: any) => console.warn('Lỗi xóa Prisma ConnectedPage:', e.message));
+    }
     return true;
   }
   return false;

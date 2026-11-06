@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getAllCampaigns, saveCampaign } from '@/lib/storage';
 import { CampaignData } from '@/lib/types';
+import { validateCampaignFinancials, validateStateTransition, CAMPAIGN_SAFETY_LIMITS } from '@/lib/campaign-policy';
+import { NotificationService } from '@/lib/notifications/notification-service';
 
 export async function GET() {
   try {
     const campaigns = getAllCampaigns();
     
-    // Thống kê theo chuẩn BaHa Header
+    // Thống kê chính xác theo chuẩn BaHa Header (Phân biệt rõ Real và Simulated)
     const stats = {
-      running: campaigns.filter(c => c.status === 'ACTIVE').length,
+      running: campaigns.filter(c => c.status === 'ACTIVE' || c.status === 'SIMULATED_ACTIVE').length,
       drafts: campaigns.filter(c => c.status === 'DRAFT').length,
       pending: campaigns.filter(c => c.status === 'PENDING_APPROVAL').length,
-      needsFix: 0,
-      created: campaigns.filter(c => c.status === 'CREATED_PAUSED' || c.status === 'ACTIVE').length,
+      needsFix: campaigns.filter(c => c.status === 'INTEGRATION_ERROR').length,
+      created: campaigns.filter(c => c.status === 'CREATED_PAUSED' || c.status === 'ACTIVE' || c.status === 'SIMULATED_ACTIVE').length,
     };
 
     return NextResponse.json({ success: true, campaigns, stats });
@@ -24,6 +26,24 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body: Partial<CampaignData> = await req.json();
+
+    // 1. KIỂM SOÁT NGÂN SÁCH & AN TOÀN TÀI CHÍNH (P0 Requirement)
+    const finValidation = validateCampaignFinancials(body);
+    if (!finValidation.isValid) {
+      return NextResponse.json({
+        success: false,
+        error: finValidation.errors.join(' '),
+      }, { status: 400 });
+    }
+
+    // 2. CHẶN CLIENT TỰ GÁN TRẠNG THÁI ACTIVE HOẶC CREATED_PAUSED TÙY TIỆN
+    let initialStatus = body.status || 'DRAFT';
+    if (initialStatus === 'ACTIVE' || initialStatus === 'SIMULATED_ACTIVE' || initialStatus === 'CREATED_PAUSED') {
+      return NextResponse.json({
+        success: false,
+        error: 'Chính sách an toàn BaHa: Không thể tạo mới chiến dịch trực tiếp ở trạng thái Active hoặc Created Paused. Phải trải qua luồng duyệt và tạo trên Meta.',
+      }, { status: 400 });
+    }
 
     // Sinh mã chiến dịch chuẩn BaHa: BaHa-ADS-YYYYMMDD-HHMMSS-XXXX
     const now = new Date();
@@ -38,7 +58,7 @@ export async function POST(req: Request) {
     const dailyBudget = Number(body.dailyBudget || 200000);
     const durationDays = Number(body.durationDays || 7);
     const totalBudget = dailyBudget * durationDays;
-    const maxEstimatedSpend = totalBudget * 1.25;
+    const maxEstimatedSpend = totalBudget * CAMPAIGN_SAFETY_LIMITS.RESERVE_FACTOR;
 
     const fullCampaign: CampaignData = {
       id: campaignId,
@@ -64,27 +84,32 @@ export async function POST(req: Request) {
       primaryText: body.primaryText || 'Liên hệ ngay để nhận ưu đãi hấp dẫn dành riêng cho bạn!',
       callToAction: body.callToAction || 'SEND_MESSAGE',
       pageName: body.pageName || 'Diệu BaHa - Quản Trị Thực Chiến',
-      status: body.status || 'DRAFT',
+      status: initialStatus,
       version: body.version || 1,
       approvalCode: body.approvalCode,
       fingerprint: body.fingerprint,
       approvedBy: body.approvedBy,
       approvedAt: body.approvedAt,
-      metaCampaignId: body.metaCampaignId,
-      metaAdSetId: body.metaAdSetId,
-      metaCreativeId: body.metaCreativeId,
-      metaAdId: body.metaAdId,
+      metaCampaignId: undefined, // Xóa id meta tự tạo từ client
+      metaAdSetId: undefined,
+      metaCreativeId: undefined,
+      metaAdId: undefined,
       isMock: body.isMock !== undefined ? body.isMock : true,
-      telegramSent: body.telegramSent || false,
-      telegramSentAt: body.telegramSentAt,
+      telegramSent: false,
       createdAt: body.createdAt || now.toISOString(),
       updatedAt: now.toISOString(),
     };
 
     const saved = saveCampaign(fullCampaign);
+
+    // Nếu chiến dịch được tạo ở trạng thái APPROVED_INTERNAL (ví dụ từ bước duyệt nội bộ B7)
+    if (saved.status === 'APPROVED_INTERNAL' && saved.approvalCode) {
+      const notifier = new NotificationService();
+      await notifier.sendEvent('CAMPAIGN_APPROVED', { campaign: saved });
+    }
+
     return NextResponse.json({ success: true, campaign: saved });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

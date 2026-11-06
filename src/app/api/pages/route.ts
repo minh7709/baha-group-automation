@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getConnectedPagesByUser, saveConnectedPage, deleteConnectedPage, ConnectedPageRecord } from '@/lib/storage';
+import { encryptToken, maskToken } from '@/lib/crypto';
 
 export async function GET(req: Request) {
   try {
@@ -41,12 +42,15 @@ export async function POST(req: Request) {
       );
     }
 
+    const rawToken = pageAccessToken || `EAAGm0PXqB_token_${pageId}`;
+    const encryptedToken = encryptToken(rawToken);
+
     const newPage: ConnectedPageRecord = {
       id: `page-${pageId}`,
       pageId: pageId.trim(),
       pageName: pageName.trim(),
       pageCategory: pageCategory || 'Trang Facebook',
-      pageAccessToken: pageAccessToken || `EAAGm0PXqB_token_${pageId}`,
+      pageAccessToken: encryptedToken,
       userId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -57,7 +61,14 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: `Đã kết nối thành công Fanpage "${pageName}"!`,
-      page: newPage,
+      page: {
+        id: newPage.id,
+        pageId: newPage.pageId,
+        pageName: newPage.pageName,
+        pageCategory: newPage.pageCategory,
+        userId: newPage.userId,
+        hasToken: true,
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

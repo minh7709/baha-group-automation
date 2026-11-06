@@ -1,15 +1,21 @@
 export type CampaignObjective = 'LEAD' | 'MESSAGES' | 'TRAFFIC' | 'AWARENESS' | 'SALES';
 
 export type CampaignStatus = 
-  | 'DRAFT'              // Bản nháp chưa duyệt
-  | 'PENDING_APPROVAL'  // Đang chờ duyệt nội bộ
-  | 'APPROVED_INTERNAL'  // Đã duyệt nội bộ (sinh mã BH-APR-...)
-  | 'CREATED_PAUSED'    // Đã tạo trên Meta ở trạng thái TẠM DỪNG (an toàn tài chính)
-  | 'ACTIVE'            // Đang chạy thực tế (sau khi qua gate bắt đầu chạy)
-  | 'STOPPED';          // Đã dừng khẩn cấp / kết thúc
+  | 'DRAFT'                // Bản nháp chưa duyệt
+  | 'PENDING_APPROVAL'    // Đang chờ duyệt nội bộ
+  | 'APPROVED_INTERNAL'    // Đã duyệt nội bộ (sinh mã BH-APR-...)
+  | 'PLATFORM_CREATING'    // Đang gửi dữ liệu tạo trên Meta
+  | 'CREATED_PAUSED'      // Đã tạo trên Meta ở trạng thái TẠM DỪNG (an toàn tài chính)
+  | 'ACTIVATION_REQUESTED' // Đã gửi lệnh kích hoạt, chờ Meta phản hồi
+  | 'ACTIVE'              // Đang chạy thực tế (Meta xác nhận active)
+  | 'SIMULATED_ACTIVE'    // Đang chạy ở chế độ MÔ PHỎNG (Mock)
+  | 'PLATFORM_REVIEW'     // Meta đã tiếp nhận nhưng đang trong hàng đợi xét duyệt chính sách
+  | 'STOPPED'             // Đã dừng khẩn cấp / kết thúc
+  | 'INTEGRATION_ERROR';  // Lỗi kết nối hoặc lỗi cấu hình Meta API
 
 export interface CampaignData {
   id: string;
+  userId?: string;            // ID chủ sở hữu (Multi-tenant)
   code: string;               // VD: BaHa-ADS-20261103-141219-3YRZ
   name: string;               // Tên sản phẩm / dịch vụ
   description: string;        // Mô tả ngắn
@@ -58,8 +64,28 @@ export interface CampaignData {
   telegramSent: boolean;
   telegramSentAt?: string;
 
+  // Theo dõi lỗi tích hợp Meta
+  lastError?: string;
+  errorStep?: string;
+
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CampaignAiSuggestion {
+  headlines: string[];
+  primaryTexts: string[];
+  callToAction: string;
+  suggestedTargeting: {
+    ageRange: string;
+    gender: 'ALL' | 'FEMALE' | 'MALE';
+    interests: string[];
+  };
+  specialCategoryCheck: {
+    recommendedCategory: 'NONE' | 'HOUSING' | 'CREDIT' | 'EMPLOYMENT';
+    warningMessage?: string;
+  };
+  policyWarnings: string[];
 }
 
 export interface TelegramConfig {
@@ -75,4 +101,3 @@ export interface SystemSafetySettings {
   globalWriteLock: boolean;   // Khóa ghi toàn cục: true
   metaApiMode: 'MOCK' | 'REAL';
 }
-

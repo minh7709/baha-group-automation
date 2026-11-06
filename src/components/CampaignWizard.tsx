@@ -155,38 +155,39 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({
   const handleCreateOnMeta = async (camp: CampaignData) => {
     setIsSaving(true);
     try {
-      // 1. Gọi API Meta (Mock hoặc Real)
+      const botToken = localStorage.getItem('baha_telegram_token') || undefined;
+      const chatId = localStorage.getItem('baha_telegram_chat_id') || undefined;
+
+      // 1. Gọi API Meta với đầy đủ adapter và kiểm tra kết quả chặt chẽ
       const metaRes = await fetch('/api/meta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'create',
           campaign: camp,
+          campaignId: camp.id,
           mode: metaMode,
-        }),
-      });
-      const metaJson = await metaRes.json();
-
-      // 2. Gọi Telegram API thật (Lấy cấu hình từ localStorage nếu có)
-      const botToken = localStorage.getItem('baha_telegram_token') || undefined;
-      const chatId = localStorage.getItem('baha_telegram_chat_id') || undefined;
-
-      const teleRes = await fetch('/api/telegram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaignData: {
-            ...camp,
-            metaCampaignId: metaJson.metaCampaignId,
-            status: 'CREATED_PAUSED',
-          },
           botToken,
           chatId,
         }),
       });
-      const teleJson = await teleRes.json();
+      const metaJson = await metaRes.json();
 
-      const finalCamp: CampaignData = {
+      // Kiểm tra metaJson.success trước khi cập nhật (P0 Requirement)
+      if (!metaRes.ok || !metaJson.success) {
+        alert(`Không thể tạo trên Meta: ${metaJson.error || 'Lỗi không xác định.'}`);
+        const errorCamp: CampaignData = {
+          ...camp,
+          status: 'INTEGRATION_ERROR',
+          lastError: metaJson.error,
+          errorStep: metaJson.errorStep,
+        };
+        setFormData(errorCamp);
+        await handleSave(errorCamp);
+        return;
+      }
+
+      const finalCamp: CampaignData = metaJson.campaign || {
         ...camp,
         status: 'CREATED_PAUSED',
         metaCampaignId: metaJson.metaCampaignId,
@@ -194,16 +195,17 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({
         metaCreativeId: metaJson.metaCreativeId,
         metaAdId: metaJson.metaAdId,
         isMock: metaJson.isMock,
-        telegramSent: teleJson.success || false,
-        telegramSentAt: teleJson.success ? new Date().toISOString() : undefined,
+        telegramSent: true,
+        telegramSentAt: new Date().toISOString(),
       };
 
+      setFormData(finalCamp);
       await handleSave(finalCamp);
       onComplete(finalCamp);
       setCurrentStep(8);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Lỗi khi tạo trên Meta hoặc bắn Telegram");
+      alert("Lỗi kết nối khi gửi lệnh tạo lên Meta: " + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -658,6 +660,21 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({
                     </button>
                   ))}
                 </div>
+                {aiSuggestions.policyWarnings && aiSuggestions.policyWarnings.length > 0 && (
+                  <div className="pt-1.5 space-y-1">
+                    {aiSuggestions.policyWarnings.map((w: string, i: number) => (
+                      <p key={i} className="text-[11px] text-amber-300 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0 text-amber-400" />
+                        <span>{w}</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {aiSuggestions.disclaimer && (
+                  <p className="text-[10px] text-gray-400 italic pt-1 border-t border-emerald-900/40">
+                    💡 {aiSuggestions.disclaimer}
+                  </p>
+                )}
               </div>
             )}
 

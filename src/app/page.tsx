@@ -245,22 +245,35 @@ export default function HomePage() {
     }
   };
 
-  // Bật chạy Pilot thật
+  // Bật chạy Pilot: Gọi Meta API kiểm tra và kích hoạt thật hoặc qua Adapter
   const handleStartPilot = async (camp: CampaignData) => {
     try {
-      const res = await fetch(`/api/campaigns/${camp.id}`, {
-        method: 'PUT',
+      showToast("Đang gửi lệnh kích hoạt tới Meta...");
+      const botToken = localStorage.getItem('baha_telegram_token') || undefined;
+      const chatId = localStorage.getItem('baha_telegram_chat_id') || undefined;
+
+      const res = await fetch('/api/meta', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ACTIVE' }),
+        body: JSON.stringify({
+          action: 'activate',
+          campaignId: camp.id,
+          mode: metaMode,
+          botToken,
+          chatId,
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        showToast("ĐÃ BẬT CHẠY PILOT THÀNH CÔNG! Trạng thái hiện tại: ACTIVE.");
+        showToast(data.message || `Đã kích hoạt thành công! Trạng thái: ${data.status}`);
         await fetchCampaigns();
         setIsPilotOpen(false);
+      } else {
+        alert(data.error || "Meta từ chối kích hoạt chiến dịch.");
+        await fetchCampaigns();
       }
     } catch (err: any) {
-      alert("Lỗi bật chạy: " + err.message);
+      alert("Lỗi kết nối Meta khi kích hoạt: " + err.message);
     }
   };
 

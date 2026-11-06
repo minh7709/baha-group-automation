@@ -84,11 +84,15 @@ export const PilotLaunchCenter: React.FC<PilotLaunchCenterProps> = ({
         {/* Current Status Banner */}
         <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0c1018] border border-[#232b3d]">
           <div className="flex items-center space-x-3">
-            <div className={`w-3 h-3 rounded-full ${campaign.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+            <div className={`w-3 h-3 rounded-full ${campaign.status === 'ACTIVE' || campaign.status === 'SIMULATED_ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
             <div>
               <div className="text-xs text-gray-400">Trạng thái phân phối</div>
               <div className="text-sm font-bold text-gray-200">
-                {campaign.status === 'ACTIVE' ? 'ĐANG CHẠY PILOT (ACTIVE)' : 'STOPPED / TẠM DỪNG'}
+                {campaign.status === 'ACTIVE' 
+                  ? 'ĐANG CHẠY THẬT (ACTIVE)' 
+                  : campaign.status === 'SIMULATED_ACTIVE'
+                  ? 'MÔ PHỎNG ĐANG CHẠY (SIMULATED_ACTIVE)'
+                  : 'STOPPED / TẠM DỪNG'}
               </div>
             </div>
           </div>

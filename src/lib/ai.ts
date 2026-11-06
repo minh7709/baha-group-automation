@@ -1,12 +1,6 @@
-export interface AIContentSuggestion {
-  headlines: string[];
-  primaryTexts: string[];
-  callToAction: string;
-  suggestedTargeting: {
-    ageRange: string;
-    gender: 'ALL' | 'FEMALE' | 'MALE';
-    interests: string[];
-  };
+import { CampaignAiSuggestion } from './types';
+
+export interface AIContentSuggestion extends CampaignAiSuggestion {
   specialCategoryCheck: {
     hasHousingSignal: boolean;
     hasCreditSignal: boolean;
@@ -14,6 +8,48 @@ export interface AIContentSuggestion {
     recommendedCategory: 'NONE' | 'HOUSING' | 'CREDIT' | 'EMPLOYMENT';
     warningMessage?: string;
   };
+  disclaimer: string;
+}
+
+/**
+ * Làm sạch và giới hạn độ dài input chống Prompt Injection & rò rỉ token
+ */
+function sanitizeAiInput(text: string, maxLength = 800): string {
+  if (!text) return '';
+  // Cắt ngắn nếu vượt quá giới hạn
+  let sanitized = text.slice(0, maxLength);
+  // Loại bỏ các từ khóa nguy cơ tiêm prompt hệ thống
+  sanitized = sanitized.replace(/ignore previous instructions/gi, '');
+  sanitized = sanitized.replace(/system prompt/gi, '');
+  // Loại bỏ các chuỗi token nhạy cảm nếu có
+  sanitized = sanitized.replace(/EAAG\w+/g, '[MASKED_TOKEN]');
+  sanitized = sanitized.replace(/\d{9,}:[\w-]+/g, '[MASKED_TELE_TOKEN]');
+  return sanitized.trim();
+}
+
+/**
+ * Kiểm tra các rủi ro vi phạm chính sách quảng cáo của Meta
+ */
+function checkAdvertisingPolicies(text: string): string[] {
+  const warnings: string[] = [];
+  const lower = text.toLowerCase();
+
+  // 1. Cam kết chữa bệnh / kết quả y tế quá mức
+  if (lower.includes('100% khỏi') || lower.includes('chữa dứt điểm') || lower.includes('thuốc trị') || lower.includes('đặc trị')) {
+    warnings.push('Chính sách Meta cấm cam kết kết quả y tế/sức khỏe tuyệt đối («chữa dứt điểm», «100% khỏi»). Hãy điều chỉnh sang «hỗ trợ cải thiện».');
+  }
+
+  // 2. Cam kết tài chính phi thực tế
+  if (lower.includes('làm giàu nhanh') || lower.includes('thu nhập thụ động cam kết') || lower.includes('lãi suất 0% trọn đời')) {
+    warnings.push('Phát hiện dấu hiệu cam kết tài chính không thực tế có thể bị Meta từ chối duyệt hoặc khóa tài khoản.');
+  }
+
+  // 3. Phân biệt đối xử / từ ngữ nhạy cảm
+  if (lower.includes('chỉ dành cho người giàu') || lower.includes('cấm người nghèo')) {
+    warnings.push('Chính sách Meta nghiêm cấm nội dung mang tính phân biệt đối xử.');
+  }
+
+  return warnings;
 }
 
 export async function generateAdContentWithAI(params: {
@@ -23,30 +59,35 @@ export async function generateAdContentWithAI(params: {
   location: string;
   apiKey?: string;
 }): Promise<AIContentSuggestion> {
-  const { productName, description, objective, location } = params;
+  const productName = sanitizeAiInput(params.productName, 200);
+  const description = sanitizeAiInput(params.description, 800);
+  const objective = sanitizeAiInput(params.objective, 100);
+  const location = sanitizeAiInput(params.location, 100);
   const apiKey = params.apiKey || process.env.GEMINI_API_KEY;
 
-  // Kiểm tra danh mục đặc biệt (Theo chuẩn yêu cầu BaHa Founder)
-  const descLower = (productName + " " + description).toLowerCase();
-  const hasHousing = descLower.includes("nhà") || descLower.includes("nội thất") || descLower.includes("bất động sản") || descLower.includes("căn hộ");
-  const hasCredit = descLower.includes("vay") || descLower.includes("tín chấp") || descLower.includes("thẻ tín dụng") || descLower.includes("tài chính");
-  const hasEmployment = descLower.includes("tuyển dụng") || descLower.includes("việc làm") || descLower.includes("thực tập");
+  // 1. Kiểm tra danh mục đặc biệt (Special Ad Categories)
+  const combinedText = `${productName} ${description}`.toLowerCase();
+  const hasHousing = combinedText.includes('nhà') || combinedText.includes('nội thất') || combinedText.includes('bất động sản') || combinedText.includes('căn hộ') || combinedText.includes('chung cư');
+  const hasCredit = combinedText.includes('vay') || combinedText.includes('tín chấp') || combinedText.includes('thẻ tín dụng') || combinedText.includes('tài chính') || combinedText.includes('trả góp');
+  const hasEmployment = combinedText.includes('tuyển dụng') || combinedText.includes('việc làm') || combinedText.includes('thực tập sinh') || combinedText.includes('tìm việc');
 
   let recommendedCategory: 'NONE' | 'HOUSING' | 'CREDIT' | 'EMPLOYMENT' = 'NONE';
   let warningMessage: string | undefined;
 
   if (hasHousing) {
     recommendedCategory = 'HOUSING';
-    warningMessage = 'Có dấu hiệu quảng cáo nhà ở / nội thất — Founder phải quyết định Danh mục đặc biệt ở bước Khách hàng.';
+    warningMessage = 'Có dấu hiệu quảng cáo nhà ở / nội thất / bất động sản — Founder phải xác nhận Danh mục đặc biệt ở bước Khách hàng.';
   } else if (hasCredit) {
     recommendedCategory = 'CREDIT';
-    warningMessage = 'Có dấu hiệu dịch vụ tài chính / tín dụng — Cần khai báo Danh mục đặc biệt theo chính sách Meta.';
+    warningMessage = 'Có dấu hiệu dịch vụ tài chính / cho vay — Bắt buộc khai báo Danh mục đặc biệt (CREDIT) theo chính sách Meta.';
   } else if (hasEmployment) {
     recommendedCategory = 'EMPLOYMENT';
-    warningMessage = 'Có dấu hiệu tuyển dụng việc làm — Cần tuân thủ danh mục cơ hội việc làm của Meta.';
+    warningMessage = 'Có dấu hiệu tuyển dụng việc làm — Cần tuân thủ danh mục cơ hội việc làm của Meta (EMPLOYMENT).';
   }
 
-  // Nếu có Gemini API Key, gọi trực tiếp Gemini API
+  const initialWarnings = checkAdvertisingPolicies(combinedText);
+
+  // 2. Nếu có Gemini API Key, gọi trực tiếp Gemini API với timeout 8s
   if (apiKey) {
     try {
       const prompt = `
@@ -57,16 +98,13 @@ Hãy tạo nội dung quảng cáo có tỷ lệ chuyển đổi cao cho dịch 
 - Mục tiêu: ${objective}
 - Khu vực: ${location}
 
-Trả về DUY NHẤT một chuỗi JSON hợp lệ với cấu trúc sau:
+Quy tắc bắt buộc:
+1. Tiêu đề (Headlines): Ngắn gọn, hấp dẫn, dưới 45 ký tự.
+2. Bài viết (Primary text): Tối ưu cho người Việt, có emoji, chia đoạn rõ ràng, có CTA mạnh mẽ. Tuyệt đối không dùng cam kết quá mức sai sự thật.
+3. Trả về DUY NHẤT một chuỗi JSON chuẩn (không kèm markdown \`\`\`json):
 {
-  "headlines": [
-    "Tiêu đề 1 thu hút dưới 45 ký tự",
-    "Tiêu đề 2 nhấn mạnh ưu đãi",
-    "Tiêu đề 3 mang tính cam kết"
-  ],
-  "primaryTexts": [
-    "Bài viết quảng cáo đầy đủ có emoji, nêu vấn đề, giải pháp, quà tặng và kêu gọi hành động cụ thể"
-  ],
+  "headlines": ["Tiêu đề 1", "Tiêu đề 2", "Tiêu đề 3"],
+  "primaryTexts": ["Nội dung bài viết quảng cáo hoàn chỉnh"],
   "callToAction": "SEND_MESSAGE",
   "suggestedTargeting": {
     "ageRange": "25 - 45",
@@ -76,21 +114,59 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ với cấu trúc sau:
 }
       `.trim();
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json' },
-        }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' },
+          }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
       const data = await response.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
       if (rawText) {
-        const parsed = JSON.parse(rawText);
+        const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanedText);
+
+        // Schema validation an toàn
+        const headlines = Array.isArray(parsed.headlines) && parsed.headlines.length > 0 
+          ? parsed.headlines.slice(0, 5) 
+          : [`${productName} - Ưu Đãi Độc Quyền Hôm Nay`];
+
+        const primaryTexts = Array.isArray(parsed.primaryTexts) && parsed.primaryTexts.length > 0
+          ? parsed.primaryTexts.slice(0, 3)
+          : [`Chào bạn! Khám phá ngay ${productName} tại ${location}. Để lại tin nhắn để nhận tư vấn chi tiết.`];
+
+        const targeting = parsed.suggestedTargeting || {
+          ageRange: '25 - 45',
+          gender: 'ALL',
+          interests: ['Mua sắm trực tuyến', productName],
+        };
+
+        const postGenWarnings = [...initialWarnings];
+        primaryTexts.forEach((pt: string) => {
+          postGenWarnings.push(...checkAdvertisingPolicies(pt));
+        });
+
         return {
-          ...parsed,
+          headlines,
+          primaryTexts,
+          callToAction: parsed.callToAction || (objective === 'LEAD' ? 'GET_OFFER' : 'SEND_MESSAGE'),
+          suggestedTargeting: {
+            ageRange: targeting.ageRange || '25 - 45',
+            gender: targeting.gender === 'FEMALE' ? 'FEMALE' : targeting.gender === 'MALE' ? 'MALE' : 'ALL',
+            interests: Array.isArray(targeting.interests) ? targeting.interests.slice(0, 6) : [productName],
+          },
           specialCategoryCheck: {
             hasHousingSignal: hasHousing,
             hasCreditSignal: hasCredit,
@@ -98,70 +174,80 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ với cấu trúc sau:
             recommendedCategory,
             warningMessage,
           },
+          policyWarnings: Array.from(new Set(postGenWarnings)),
+          disclaimer: 'Nội dung do AI gợi ý. Người dùng cần kiểm tra và chỉnh sửa trước khi lưu và duyệt quảng cáo.',
         };
       }
-    } catch (err) {
-      console.warn("Lỗi gọi Gemini API, chuyển sang bộ sinh nội dung dự phòng thông minh:", err);
+    } catch (err: any) {
+      console.warn('Gemini API call failed or timed out, falling back to smart rule-based engine:', err.message);
     }
   }
 
-  // BỘ SINH NỘI DUNG THÔNG MINH DỰ PHÒNG (RULE-BASED AI ENGINE)
-  // Đảm bảo chạy 100% mượt mà ngay cả khi không có mạng hoặc chưa nhập API Key
-  const isBeauty = descLower.includes("đẹp") || descLower.includes("spa") || descLower.includes("da") || descLower.includes("thẩm mỹ");
-  const isInterior = descLower.includes("nội thất") || descLower.includes("thiết kế") || descLower.includes("nhà");
-  const isHealth = descLower.includes("keo ong") || descLower.includes("sức khỏe") || descLower.includes("thuốc") || descLower.includes("bổ");
+  // 3. Smart Rule-based Fallback Generator khi không có API key hoặc API lỗi
+  return getSmartRuleBasedSuggestion({
+    productName,
+    description,
+    objective,
+    location,
+    hasHousing,
+    hasCredit,
+    hasEmployment,
+    recommendedCategory,
+    warningMessage,
+    initialWarnings,
+  });
+}
 
-  let headlines: string[] = [];
-  let primaryText = "";
-  let ageRange = "25 - 45";
-  let gender: 'ALL' | 'FEMALE' | 'MALE' = 'ALL';
-  let interests: string[] = [];
+function getSmartRuleBasedSuggestion(ctx: {
+  productName: string;
+  description: string;
+  objective: string;
+  location: string;
+  hasHousing: boolean;
+  hasCredit: boolean;
+  hasEmployment: boolean;
+  recommendedCategory: 'NONE' | 'HOUSING' | 'CREDIT' | 'EMPLOYMENT';
+  warningMessage?: string;
+  initialWarnings: string[];
+}): AIContentSuggestion {
+  const { productName, description, objective, location, hasHousing, hasCredit, hasEmployment, recommendedCategory, warningMessage, initialWarnings } = ctx;
 
-  if (isBeauty) {
-    headlines = [
-      `Tỏa Sáng Làn Da Rạng Rỡ - Ưu Đãi 50% Tại ${location}`,
-      `Trẻ Hóa Da Chuyên Sâu Cùng ${productName}`,
-      `Đẹp Rạng Ngời Tự Nhiên - Đặt Lịch Tư Vấn Ngay Hôm Nay!`
-    ];
-    primaryText = `✨ BẠN MUỐN SỞ HỮU LÀN DA CĂNG MỊN, TRÀN ĐẦY SỨC SỐNG?\n\n🌿 ${description || 'Dịch vụ chăm sóc chuyên sâu chuẩn y khoa, đánh bay mệt mỏi và lão hóa da.'}\n\n🎁 ƯU ĐÃI ĐỘC QUYỀN TRONG THÁNG NÀY:\n✅ Giảm ngay 50% cho 20 khách hàng đầu tiên đăng ký hôm nay.\n✅ Tặng phác đồ kiểm tra và tư vấn cấu trúc da 1-1 cùng chuyên gia.\n\n📍 Phục vụ khách hàng tại khu vực: ${location}.\n👉 Bấm "Gửi tin nhắn" ngay để giữ suất ưu đãi và nhận báo giá chi tiết!`;
-    gender = 'FEMALE';
-    interests = ["Chăm sóc sắc đẹp", "Spa", "Làm đẹp tự nhiên", "Chăm sóc da"];
-  } else if (isInterior) {
-    headlines = [
-      `${productName} - Thiết Kế Thi Công Trọn Gói Giá Xưởng`,
-      `Biến Tổ Ấm Thành Kiệt Tác Cùng ${productName}`,
-      `Nhận Bản Vẽ 3D Miễn Phí Tại ${location} - Ưu Đãi Tháng Này`
-    ];
-    primaryText = `🏡 NÂNG TẦM KHÔNG GIAN SỐNG CÙNG ${productName.toUpperCase()}!\n\n${description || 'Thiết kế hiện đại, tối ưu công năng, vật liệu cao cấp chuẩn chất lượng.'}\n\n🏆 CAM KẾT VÀNG:\n🔹 Khảo sát và lên thiết kế 3D hoàn toàn MIỄN PHÍ\n🔹 Thi công đúng tiến độ - Đúng vật liệu đã cam kết\n🔹 Bảo hành công trình dài hạn lên đến 5 năm\n\n👉 Bấm "Nhận báo giá" hoặc để lại tin nhắn để được KTS tư vấn ngay hôm nay!`;
-    ageRange = "28 - 55";
-    interests = ["Thiết kế nội thất", "Kiến trúc", "Bất động sản", "Trang trí nhà cửa"];
-  } else if (isHealth) {
-    headlines = [
-      `${productName} - Bảo Vệ Sức Khỏe Gia Đình Toàn Diện`,
-      `Kháng Khuẩn Tự Nhiên, Tăng Đề Kháng Với ${productName}`,
-      `Ưu Đãi Đặc Biệt: Mua 2 Tặng 1 Duy Nhất Tuần Này!`
-    ];
-    primaryText = `🛡 BẢO VỆ CỔ HỌNG VÀ ĐƯỜNG HÔ HẤP MỖI NGÀY CÙNG ${productName.toUpperCase()}!\n\n${description || 'Chiết xuất tự nhiên an toàn lành tính cho cả gia đình, tăng cường miễn dịch.'}\n\n💥 ƯU ĐÃI DUY NHẤT HÔM NAY:\n- Mua combo tiết kiệm đến 30%\n- Miễn phí giao hàng toàn quốc\n\n👉 Bấm "Gửi tin nhắn" để được dược sĩ tư vấn chi tiết!`;
-    ageRange = "30 - 60";
-    interests = ["Sức khỏe", "Y học tự nhiên", "Dược phẩm", "Gia đình"];
-  } else {
-    headlines = [
-      `Khám Phá Giải Pháp ${productName} Đẳng Cấp Tại ${location}`,
-      `Ưu Đãi Cực Hấp Dẫn Cho ${productName} - Đặt Lịch Ngay!`,
-      `${productName} - Lựa Chọn Hàng Đầu Cho Bạn`
-    ];
-    primaryText = `🌟 Bạn đang tìm kiếm giải pháp ${productName} chất lượng cao tại ${location}?\n\n${description || 'Chúng tôi mang đến sản phẩm/dịch vụ hoàn hảo với chi phí hợp lý nhất.'}\n\n🎁 Đăng ký ngay hôm nay để nhận ưu đãi đặc biệt dành riêng cho bạn!\n👉 Bấm "Gửi tin nhắn" để được hỗ trợ 24/7!`;
-    interests = ["Mua sắm trực tuyến", "Dịch vụ chất lượng"];
-  }
+  const isBeauty = productName.toLowerCase().includes('sắc đẹp') || productName.toLowerCase().includes('spa') || productName.toLowerCase().includes('da') || productName.toLowerCase().includes('thẩm mỹ');
+
+  const headlines = isBeauty ? [
+    `Tỏa Sáng Làn Da Rạng Rỡ - Ưu Đãi Trải Nghiệm 499K`,
+    `Phục Hồi Làn Da Căng Mướt Cùng Chuyên Gia Tại ${location}`,
+    `Đăng Ký Hôm Nay: Tặng Gói Trị Liệu Trẻ Hóa Chuyên Sâu`,
+  ] : hasHousing ? [
+    `${productName} - Thiết Kế Thi Công Trọn Gói Hiện Đại`,
+    `Tối Ưu Không Gian Sống Đẳng Cấp Tại ${location}`,
+    `Nhận Ngay Bản Vẽ Thiết Kế 3D Miễn Phí Hôm Nay`,
+  ] : [
+    `${productName} - Giải Pháp Hoàn Hảo Dành Riêng Cho Bạn`,
+    `Ưu Đãi Đặc Biệt: Trải Nghiệm Dịch Vụ Đẳng Cấp Tại ${location}`,
+    `Đăng Ký Ngay Để Nhận Báo Giá Tốt Nhất Trong Tháng`,
+  ];
+
+  const primaryTexts = isBeauty ? [
+    `✨ Đánh thức vẻ đẹp tự nhiên của bạn cùng liệu trình Chăm sóc da chuyên sâu tại ${location}!\n\n🌸 ${description || 'Cam kết phục hồi làn da mềm mịn, căng bóng tự nhiên với thảo dược an toàn sinh học.'}\n🎁 ƯU ĐÃI ĐẶC BIỆT: Giảm ngay 50% cho 30 khách hàng đăng ký sớm nhất.\n\n👉 Nhấn "Gửi tin nhắn" ngay để nhận tư vấn phác đồ da miễn phí cùng chuyên gia!`,
+  ] : hasHousing ? [
+    `🏡 Nâng tầm không gian sống lý tưởng cùng ${productName}!\n\n📐 ${description || 'Thiết kế thi công nội thất chìa khóa trao tay - Cam kết bảo hành 5 năm.'}\n🎁 TẶNG NGAY bản vẽ 3D và miễn 100% phí thiết kế khi ký hợp đồng thi công trong tháng này.\n\n👉 Bấm "Nhận ưu đãi" hoặc để lại thông tin để kiến trúc sư tư vấn tận nơi!`,
+  ] : [
+    `🎯 Bạn đang tìm kiếm giải pháp tối ưu cho ${productName} tại ${location}?\n\n💡 ${description || 'Đội ngũ chuyên nghiệp của chúng tôi luôn đồng hành để mang đến trải nghiệm chất lượng vượt trội.'}\n🎁 ƯU ĐÃI KHỞI ĐỘNG: Tư vấn miễn phí và chiết khấu hấp dẫn cho khách hàng đầu tiên.\n\n👉 Nhấn nút bên dưới để kết nối trực tiếp với đội ngũ tư vấn!`,
+  ];
 
   return {
     headlines,
-    primaryTexts: [primaryText],
-    callToAction: "SEND_MESSAGE",
+    primaryTexts,
+    callToAction: objective === 'LEAD' ? 'GET_OFFER' : 'SEND_MESSAGE',
     suggestedTargeting: {
-      ageRange,
-      gender,
-      interests,
+      ageRange: isBeauty ? '25 - 45' : hasHousing ? '28 - 50' : '25 - 45',
+      gender: isBeauty ? 'FEMALE' : 'ALL',
+      interests: isBeauty
+        ? ['Chăm sóc sắc đẹp', 'Spa', 'Thẩm mỹ viện', 'Chăm sóc da mặt']
+        : hasHousing
+        ? ['Nội thất', 'Thiết kế nhà', 'Bất động sản', 'Kiến trúc']
+        : ['Kinh doanh', 'Mua sắm', productName],
     },
     specialCategoryCheck: {
       hasHousingSignal: hasHousing,
@@ -170,6 +256,7 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ với cấu trúc sau:
       recommendedCategory,
       warningMessage,
     },
+    policyWarnings: initialWarnings,
+    disclaimer: 'Nội dung do bộ gợi ý thông minh đề xuất. Bạn có thể tự do chỉnh sửa từng câu chữ trước khi gửi phê duyệt.',
   };
 }
-

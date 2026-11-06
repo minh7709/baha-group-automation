@@ -57,9 +57,15 @@ export const CampaignList: React.FC<CampaignListProps> = ({
       case 'CREATED_PAUSED':
         return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-950 text-blue-300 border border-blue-800">Meta: CREATED_PAUSED</span>;
       case 'ACTIVE':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-950 text-green-300 border border-green-700 animate-pulse">ĐANG CHẠY (ACTIVE)</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-950 text-green-300 border border-green-700 animate-pulse">ĐANG CHẠY THẬT (ACTIVE)</span>;
+      case 'SIMULATED_ACTIVE':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-950 text-purple-300 border border-purple-700 animate-pulse">MÔ PHỎNG ĐANG CHẠY</span>;
+      case 'PLATFORM_REVIEW':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-950 text-amber-300 border border-amber-700 animate-pulse">META ĐANG XÉT DUYỆT</span>;
       case 'STOPPED':
         return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-950 text-rose-300 border border-rose-800">ĐÃ DỪNG (STOPPED)</span>;
+      case 'INTEGRATION_ERROR':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-950 text-rose-300 border border-rose-800">LỖI TÍCH HỢP META</span>;
       default:
         return null;
     }
@@ -159,6 +165,13 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                     Meta ID: {camp.metaCampaignId} ({camp.isMock ? 'Mô phỏng' : 'Thật'})
                   </div>
                 )}
+
+                {camp.lastError && (
+                  <div className="text-[11px] text-rose-400 bg-rose-950/40 border border-rose-900/60 rounded px-2 py-1 flex items-center space-x-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <span>Lỗi [{camp.errorStep || 'API'}]: {camp.lastError}</span>
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Actions */}
@@ -192,7 +205,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                   <span>Đăng Fanpage (0đ)</span>
                 </button>
 
-                {camp.status === 'ACTIVE' || camp.status === 'CREATED_PAUSED' ? (
+                {camp.status === 'ACTIVE' || camp.status === 'SIMULATED_ACTIVE' || camp.status === 'PLATFORM_REVIEW' || camp.status === 'CREATED_PAUSED' ? (
                   <button
                     type="button"
                     onClick={() => onStopEmergency(camp)}
