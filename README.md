@@ -33,6 +33,33 @@
 
 ## 🚀 CÀI ĐẶT & CHẠY DỰ ÁN
 
+### Cấu hình production trên Vercel
+
+Trong Vercel, thêm các biến môi trường cho đúng môi trường `Production`:
+
+```env
+DATABASE_URL=postgresql://...
+DIRECT_URL=postgresql://...
+META_APP_ID=...
+META_APP_SECRET=...
+META_GRAPH_VERSION=v21.0
+META_REDIRECT_URI=https://your-domain.example/api/auth/facebook/callback
+NEXT_PUBLIC_APP_URL=https://your-domain.example
+META_OAUTH_CONFIG_ID=...
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_CHAT_ID=...
+GEMINI_API_KEY=...
+META_API_MODE=MOCK
+```
+
+`DATABASE_URL` và `DIRECT_URL` phải tồn tại vì Prisma schema dùng PostgreSQL. Không đặt
+`file:./dev.db` trên Vercel. `DIRECT_URL` có thể trỏ tới connection string trực tiếp của
+database provider; nếu provider không yêu cầu URL riêng, đặt cùng giá trị với `DATABASE_URL`.
+
+`META_REDIRECT_URI` phải là URL HTTPS production chính xác và phải được thêm vào Valid OAuth
+Redirect URIs trong Meta Developer Dashboard. Sau khi thay đổi Environment Variables, cần
+redeploy để Vercel chạy lại bước `prisma generate && next build`.
+
 ### 1. Chạy trên máy cục bộ (Local Development)
 
 ```bash
@@ -96,5 +123,4 @@ Dự án sử dụng Next.js App Router fullstack chuẩn, sẵn sàng deploy 1-
 - Người dùng chỉ cần bấm nút **"Kết nối Facebook"**, cấp quyền `pages_show_list`, `pages_manage_posts`, hệ thống tự động đổi Long-lived User Token thành Page Access Token vĩnh viễn (Never Expire).
 - Khách hàng không bao giờ phải tự lấy access token thủ công.
 - Hỗ trợ chế độ Test Mô Phỏng (**OAuth Mock Mode**) giúp test ngay lập tức mà không cần tài khoản Meta Verified App.
-
 

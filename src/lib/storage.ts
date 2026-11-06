@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { CampaignData } from './types';
 import { INITIAL_CAMPAIGNS } from './default-scenarios';
-import { prisma } from './prisma';
+import { getPrisma } from './prisma';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'campaigns.json');
@@ -122,6 +122,7 @@ export function saveCampaign(campaign: CampaignData): CampaignData {
   fs.writeFileSync(DATA_FILE, JSON.stringify(campaigns, null, 2), 'utf-8');
 
   // Đồng bộ thời gian thực vào SQLite via Prisma (Không dùng mock)
+  const prisma = getPrisma();
   if (prisma) {
     prisma.campaign.upsert({
       where: { id: campaign.id },
@@ -212,6 +213,7 @@ export function deleteCampaign(id: string): boolean {
   const filtered = campaigns.filter((c) => c.id !== id && c.code !== id);
   if (filtered.length !== campaigns.length) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    const prisma = getPrisma();
     if (prisma) {
       prisma.campaign.deleteMany({ where: { OR: [{ id }, { code: id }] } })
         .catch((e: any) => console.warn('Lỗi xóa Prisma Campaign:', e.message));
@@ -257,6 +259,7 @@ export function saveUser(user: UserRecord): UserRecord {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
 
   // Đồng bộ User vào SQLite via Prisma
+  const prisma = getPrisma();
   if (prisma) {
     prisma.user.upsert({
       where: { id: user.id },
@@ -324,6 +327,7 @@ export function saveConnectedPage(page: ConnectedPageRecord): ConnectedPageRecor
   fs.writeFileSync(PAGES_FILE, JSON.stringify(pages, null, 2), 'utf-8');
 
   // Đồng bộ ConnectedPage vào SQLite via Prisma
+  const prisma = getPrisma();
   if (prisma) {
     prisma.connectedPage.upsert({
       where: { id: page.id },
@@ -356,6 +360,7 @@ export function deleteConnectedPage(id: string): boolean {
   const filtered = pages.filter((p) => p.id !== id && p.pageId !== id);
   if (filtered.length !== pages.length) {
     fs.writeFileSync(PAGES_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    const prisma = getPrisma();
     if (prisma) {
       prisma.connectedPage.deleteMany({ where: { OR: [{ id }, { pageId: id }] } })
         .catch((e: any) => console.warn('Lỗi xóa Prisma ConnectedPage:', e.message));
