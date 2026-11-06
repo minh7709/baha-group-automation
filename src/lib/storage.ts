@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { CampaignData } from './types';
 import { INITIAL_CAMPAIGNS } from './default-scenarios';
-import { getPrisma } from './prisma';
+import { getPrisma, withPrismaRetry } from './prisma';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'campaigns.json');
@@ -159,9 +159,9 @@ export async function getCampaignByIdAsync(id: string): Promise<CampaignData | u
   const prisma = getPrisma();
   if (prisma) {
     try {
-      const campaign = await prisma.campaign.findFirst({
+      const campaign = await withPrismaRetry((client) => client.campaign.findFirst({
         where: { OR: [{ id }, { code: id }] },
-      });
+      }));
       if (campaign) {
         return {
           ...campaign,
@@ -426,7 +426,9 @@ export async function getAllConnectedPagesAsync(): Promise<ConnectedPageRecord[]
   const prisma = getPrisma();
   if (prisma) {
     try {
-      const pages = await prisma.connectedPage.findMany({ orderBy: { updatedAt: 'desc' } });
+      const pages = await withPrismaRetry((client) =>
+        client.connectedPage.findMany({ orderBy: { updatedAt: 'desc' } }),
+      );
       return pages.map(mapConnectedPage);
     } catch (error: any) {
       console.warn('Không đọc được ConnectedPage từ Prisma, dùng JSON fallback:', error.message);
@@ -439,9 +441,9 @@ export async function getConnectedPageByIdAsync(pageId: string): Promise<Connect
   const prisma = getPrisma();
   if (prisma) {
     try {
-      const page = await prisma.connectedPage.findFirst({
+      const page = await withPrismaRetry((client) => client.connectedPage.findFirst({
         where: { OR: [{ pageId }, { id: pageId }] },
-      });
+      }));
       if (page) return mapConnectedPage(page);
     } catch (error: any) {
       console.warn('Không đọc được ConnectedPage từ Prisma:', error.message);
@@ -529,11 +531,11 @@ export async function getFacebookPosts(pageId?: string): Promise<FacebookPostSto
   const prisma = getPrisma();
   if (prisma) {
     try {
-      const posts = await prisma.facebookPost.findMany({
+      const posts = await withPrismaRetry((client) => client.facebookPost.findMany({
         where: pageId ? { pageId } : undefined,
         orderBy: { createdTime: 'desc' },
         take: 5000,
-      });
+      }));
       return posts.map((post) => ({
         id: post.postId,
         pageId: post.pageId,

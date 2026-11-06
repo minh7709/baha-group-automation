@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getPrisma } from '@/lib/prisma';
+import { getPrisma, withPrismaRetry } from '@/lib/prisma';
 import { decryptToken, encryptToken } from '@/lib/crypto';
 import { FACEBOOK_SESSION_COOKIE, readFacebookSession } from '@/lib/facebook-auth';
 import { saveConnectedPage, ConnectedPageRecord } from '@/lib/storage';
@@ -19,7 +19,9 @@ export async function POST() {
     return NextResponse.json({ success: false, error: 'DATABASE_URL chưa được cấu hình.' }, { status: 503 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.id } });
+  const user = await withPrismaRetry((client) =>
+    client.user.findUnique({ where: { id: session.id } }),
+  );
   if (!user?.facebookAccessToken) {
     return NextResponse.json({
       success: false,

@@ -132,8 +132,13 @@ export const FacebookPostsPanel: React.FC<FacebookPostsPanelProps> = ({ onCreate
                   <span><MessageCircle className="inline w-3 h-3 mr-1" />{post.comments}</span>
                   <span><Share2 className="inline w-3 h-3 mr-1" />{post.shares}</span>
                 </div>
-                <button type="button" onClick={() => createDraftFromPost(post)} className="w-full mt-2 py-2 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold hover:bg-emerald-900">
-                  Chọn bài này để tạo quảng cáo
+                <button
+                  type="button"
+                  data-testid={`create-ad-from-post-${post.id}`}
+                  onClick={() => createDraftFromPost(post)}
+                  className="w-full mt-3 min-h-10 py-2.5 rounded-lg bg-emerald-600 text-white border border-emerald-400 text-sm font-bold shadow-lg shadow-emerald-950/40 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  Chọn bài này để quảng cáo
                 </button>
               </div>
             </article>
