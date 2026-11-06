@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import crypto from 'crypto';
 import { saveConnectedPage, ConnectedPageRecord } from '@/lib/storage';
 import { encryptToken } from '@/lib/crypto';
 import { NotificationService } from '@/lib/notifications/notification-service';
+import { createFacebookSession, FACEBOOK_SESSION_COOKIE } from '@/lib/facebook-auth';
+import { getPrisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,6 +28,7 @@ export async function GET(req: Request) {
   // 1. Kiểm tra CSRF State token từ HttpOnly Cookie
   const cookieStore = cookies();
   const savedState = cookieStore.get('fb_oauth_state')?.value;
+  const oauthScope = cookieStore.get('fb_oauth_scope')?.value || 'pages';
 
   if (!state || !savedState || state !== savedState) {
     console.warn('OAuth CSRF warning: State không khớp hoặc cookie hết hạn.');
@@ -43,6 +47,8 @@ export async function GET(req: Request) {
 
   try {
     let pages: Array<{ id: string; name: string; category?: string; access_token: string }> = [];
+    let facebookUser: { id: string; name: string; email?: string } | undefined;
+    let userAccessToken = '';
 
     // KIỂM TRA CHẾ ĐỘ THẬT HAY MÔ PHỎNG
     const isMock = code.startsWith('mock_oauth_code') || !appId || !appSecret;
@@ -69,6 +75,8 @@ export async function GET(req: Request) {
           access_token: `EAAGm0PXqB_mock_token_102938475610295_${Date.now()}`,
         },
       ];
+      facebookUser = { id: 'mock-facebook-user', name: 'Facebook Demo User', email: 'mock-facebook-user@facebook.local' };
+      userAccessToken = 'mock_facebook_user_token';
     } else {
       // 1. Đổi Code lấy Short-Lived User Access Token
       const tokenUrl = `https://graph.facebook.com/${apiVersion}/oauth/access_token?` + new URLSearchParams({
@@ -98,21 +106,62 @@ export async function GET(req: Request) {
       const longTokenRes = await fetch(longTokenUrl);
       const longTokenData = await longTokenRes.json();
       const longLivedUserToken = longTokenData.access_token || shortLivedToken;
+      userAccessToken = longLivedUserToken;
 
-      // 3. Lấy danh sách tất cả các Fanpage kèm Page Token
-      const accountsUrl = `https://graph.facebook.com/${apiVersion}/me/accounts?fields=id,name,category,access_token&access_token=${longLivedUserToken}`;
-      const accountsRes = await fetch(accountsUrl);
-      const accountsData = await accountsRes.json();
-
-      if (!accountsRes.ok || accountsData.error) {
-        throw new Error(accountsData.error?.message || 'Không thể đọc danh sách Fanpage từ tài khoản');
+      const meUrl = `https://graph.facebook.com/${apiVersion}/me?fields=id,name,email&access_token=${longLivedUserToken}`;
+      const meRes = await fetch(meUrl);
+      const meData = await meRes.json();
+      if (!meRes.ok || meData.error) {
+        throw new Error(meData.error?.message || 'Không thể đọc thông tin tài khoản Facebook');
       }
+      facebookUser = meData;
 
-      pages = accountsData.data || [];
+      if (oauthScope === 'pages') {
+        // Chỉ gọi /me/accounts khi người dùng chọn luồng Fanpage.
+        const accountsUrl = `https://graph.facebook.com/${apiVersion}/me/accounts?fields=id,name,category,access_token&access_token=${longLivedUserToken}`;
+        const accountsRes = await fetch(accountsUrl);
+        const accountsData = await accountsRes.json();
+
+        if (!accountsRes.ok || accountsData.error) {
+          throw new Error(accountsData.error?.message || 'Không thể đọc danh sách Fanpage từ tài khoản');
+        }
+
+        pages = accountsData.data || [];
+      }
+    }
+
+    if (!facebookUser) {
+      throw new Error('Facebook không trả về thông tin tài khoản người dùng.');
+    }
+
+    const userId = `fb-${facebookUser.id}`;
+    const userEmail = facebookUser.email || `${facebookUser.id}@facebook.local`;
+    const prisma = getPrisma();
+    if (prisma) {
+      await prisma.user.upsert({
+        where: { id: userId },
+        update: {
+          name: facebookUser.name,
+          email: userEmail,
+          facebookId: facebookUser.id,
+          facebookAccessToken: encryptToken(userAccessToken),
+          emailVerified: true,
+        },
+        create: {
+          id: userId,
+          name: facebookUser.name,
+          email: userEmail,
+          passwordHash: crypto.randomBytes(32).toString('hex'),
+          role: 'USER',
+          emailVerified: true,
+          facebookId: facebookUser.id,
+          facebookAccessToken: encryptToken(userAccessToken),
+        },
+      });
     }
 
     // 4. Lưu từng Fanpage vào Database với TOKEN ĐÃ ĐƯỢC MÃ HÓA AES-256 (Bảo mật Section 3.4)
-    const defaultUserId = 'usr-founder-baha';
+    const defaultUserId = userId;
     for (const page of pages) {
       const encryptedAccessToken = encryptToken(page.access_token);
       const pageRecord: ConnectedPageRecord = {
@@ -125,7 +174,7 @@ export async function GET(req: Request) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      saveConnectedPage(pageRecord);
+      await saveConnectedPage(pageRecord);
     }
 
     // 5. Bắn thông báo Telegram qua NotificationService
@@ -141,8 +190,21 @@ export async function GET(req: Request) {
     const response = NextResponse.redirect(
       `${appBaseUrl}/?oauth=success&count=${pages.length}`
     );
+    response.cookies.set(FACEBOOK_SESSION_COOKIE, createFacebookSession({
+      id: userId,
+      email: userEmail,
+      name: facebookUser.name,
+      role: 'USER',
+    }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    });
     // Xóa cookie state đã sử dụng
     response.cookies.delete('fb_oauth_state');
+    response.cookies.delete('fb_oauth_scope');
     return response;
   } catch (err: any) {
     console.error('Lỗi OAuth Callback:', err);

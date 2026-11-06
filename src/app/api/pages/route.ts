@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    saveConnectedPage(newPage);
+    await saveConnectedPage(newPage);
 
     return NextResponse.json({
       success: true,

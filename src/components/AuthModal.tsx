@@ -212,6 +212,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         ) : (
           <>
+            <a
+              href="/api/auth/facebook/login?scope=basic"
+              className="w-full py-2.5 rounded-xl bg-[#1877f2] hover:bg-[#166fe5] text-white text-xs font-bold flex items-center justify-center gap-2 transition"
+            >
+              <span className="text-base font-black">f</span>
+              Đăng nhập bằng Facebook OAuth 2.0
+            </a>
+            <p className="text-[11px] text-gray-500 text-center">
+              OAuth sẽ tạo phiên đăng nhập Facebook riêng; không dùng tài khoản Founder mặc định.
+            </p>
             {/* Tabs */}
             <div className="flex items-center bg-[#0b0f19] p-1 rounded-xl border border-[#1e293b] text-xs">
               <button
@@ -455,4 +465,3 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     </div>
   );
 };
-

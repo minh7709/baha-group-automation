@@ -69,25 +69,18 @@ export default function HomePage() {
         window.history.replaceState({}, '', window.location.pathname);
       }
 
-      const savedUser = localStorage.getItem('baha_current_user');
-      if (savedUser) {
-        try {
-          setCurrentUser(JSON.parse(savedUser));
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        // Mặc định tài khoản Founder BaHa cho trải nghiệm tiện lợi ngay lập tức
-        const defaultUser = {
-          id: 'usr-founder-baha',
-          email: 'founder@bahagroup.vn',
-          name: 'Diệu BaHa (Founder)',
-          role: 'FOUNDER',
-          emailVerified: true,
-        };
-        setCurrentUser(defaultUser);
-        localStorage.setItem('baha_current_user', JSON.stringify(defaultUser));
-      }
+      fetch('/api/auth/me')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.user) {
+            setCurrentUser(data.user);
+            localStorage.setItem('baha_current_user', JSON.stringify(data.user));
+          } else {
+            const savedUser = localStorage.getItem('baha_current_user');
+            if (savedUser) setCurrentUser(JSON.parse(savedUser));
+          }
+        })
+        .catch((error) => console.error('Lỗi kiểm tra phiên đăng nhập:', error));
     }
   }, []);
 
@@ -103,6 +96,7 @@ export default function HomePage() {
     setCurrentUser(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('baha_current_user');
+      fetch('/api/auth/me', { method: 'DELETE' }).catch((error) => console.error('Lỗi đăng xuất:', error));
     }
     showToast("Đã đăng xuất thành công.");
   };

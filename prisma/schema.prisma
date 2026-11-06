@@ -17,6 +17,8 @@ model User {
   emailVerified     Boolean         @default(false)
   verificationToken String?
   tokenExpiry       DateTime?
+  facebookId        String?       @unique
+  facebookAccessToken String?
   campaigns         Campaign[]
   connectedPages    ConnectedPage[] // 1 user sở hữu nhiều Fanpage (Multi-tenant OAuth)
   createdAt         DateTime        @default(now())

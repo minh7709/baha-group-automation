@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   // Chỉ yêu cầu quyền đã được cấu hình cho Use Case tương ứng trên Meta.
   // `email` không bắt buộc để kết nối Fanpage và thường gây Invalid Scopes
   // khi app chưa bật Facebook Login với quyền email.
-  let scopes = process.env.META_OAUTH_BASIC_SCOPES || 'public_profile';
+  let scopes = 'public_profile';
   if (scopeType === 'pages') {
     scopes = process.env.META_OAUTH_PAGES_SCOPES
       || 'pages_show_list,pages_read_engagement,pages_manage_posts';
@@ -62,6 +62,13 @@ export async function GET(req: Request) {
   const response = NextResponse.redirect(fbAuthUrl);
   // Lưu state vào HttpOnly cookie để đối soát ở callback
   response.cookies.set('fb_oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 600,
+    path: '/',
+  });
+  response.cookies.set('fb_oauth_scope', scopeType, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

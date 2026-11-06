@@ -411,7 +411,7 @@ export function getConnectedPageById(pageId: string): ConnectedPageRecord | unde
   return pages.find((p) => p.pageId === pageId || p.id === pageId);
 }
 
-export function saveConnectedPage(page: ConnectedPageRecord): ConnectedPageRecord {
+export async function saveConnectedPage(page: ConnectedPageRecord): Promise<ConnectedPageRecord> {
   ensureDataFiles();
   const pages = getAllConnectedPages();
   const index = pages.findIndex(
@@ -429,7 +429,7 @@ export function saveConnectedPage(page: ConnectedPageRecord): ConnectedPageRecor
   // Đồng bộ ConnectedPage vào SQLite via Prisma
   const prisma = getPrisma();
   if (prisma) {
-    prisma.connectedPage.upsert({
+    await prisma.connectedPage.upsert({
       where: { id: page.id },
       update: {
         pageId: page.pageId,
@@ -448,7 +448,10 @@ export function saveConnectedPage(page: ConnectedPageRecord): ConnectedPageRecor
         instagramId: page.instagramId || null,
         userId: page.userId,
       },
-    }).catch((e: any) => console.warn('Lỗi ghi Prisma ConnectedPage:', e.message));
+    }).catch((e: any) => {
+      console.warn('Lỗi ghi Prisma ConnectedPage:', e.message);
+      throw e;
+    });
   }
 
   return page;

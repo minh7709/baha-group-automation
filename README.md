@@ -46,6 +46,7 @@ META_GRAPH_VERSION=v21.0
 META_REDIRECT_URI=https://your-domain.example/api/auth/facebook/callback
 NEXT_PUBLIC_APP_URL=https://your-domain.example
 META_OAUTH_CONFIG_ID=...
+SESSION_SECRET=...
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 GEMINI_API_KEY=...
@@ -59,6 +60,15 @@ database provider; nếu provider không yêu cầu URL riêng, đặt cùng gi�
 `META_REDIRECT_URI` phải là URL HTTPS production chính xác và phải được thêm vào Valid OAuth
 Redirect URIs trong Meta Developer Dashboard. Sau khi thay đổi Environment Variables, cần
 redeploy để Vercel chạy lại bước `prisma generate && next build`.
+
+### Đăng nhập Facebook và giới hạn dữ liệu profile
+
+Nút **Đăng nhập bằng Facebook OAuth 2.0** dùng luồng `basic` với scope ổn định
+`public_profile`, tạo user Facebook và session HttpOnly tại `/api/auth/me`. Luồng này không
+gửi các scope cũ như `email`, `user_posts` hoặc `user_photos`, vì các scope đó có thể bị Meta
+từ chối hoặc không còn được cấp cho ứng dụng mới. Bài đăng cần đọc từ Fanpage phải dùng nút
+OAuth Fanpage với Page Access Token và các quyền Page đã được Meta cấp; không thể dùng
+`public_profile` để đọc bài đăng cá nhân tùy ý.
 
 ### Đồng bộ bài đăng Facebook tự động
 

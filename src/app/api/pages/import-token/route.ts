@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      saveConnectedPage(pageRecord);
+      await saveConnectedPage(pageRecord);
     }
 
     // 4. Bắn thông báo Telegram
@@ -92,4 +92,3 @@ export async function POST(req: Request) {
     }, { status: 500 });
   }
 }
-
