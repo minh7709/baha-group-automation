@@ -213,7 +213,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         ) : (
           <>
             <a
-              href="/api/auth/facebook/login?scope=basic"
+              href="/api/auth/facebook/login?scope=profile"
               className="w-full py-2.5 rounded-xl bg-[#1877f2] hover:bg-[#166fe5] text-white text-xs font-bold flex items-center justify-center gap-2 transition"
             >
               <span className="text-base font-black">f</span>

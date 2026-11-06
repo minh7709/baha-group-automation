@@ -296,7 +296,7 @@ export const ConnectedPagesModal: React.FC<ConnectedPagesModalProps> = ({
 
               {/* OAuth Basic */}
               <a
-                href="/api/auth/facebook/login?scope=basic"
+                href="/api/auth/facebook/login?scope=profile"
                 title="Dùng cho App chưa cấu hình Use Case Pages trên Meta Developer"
                 className="px-3.5 py-2 rounded-xl bg-[#1e293b] hover:bg-[#2e3b52] text-gray-200 border border-[#334155] font-bold text-xs flex items-center space-x-1.5 transition active:scale-95"
               >

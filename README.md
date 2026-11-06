@@ -68,14 +68,20 @@ Pages cũ từ `.env`; các quyền phải được chọn bên trong configurat
 `META_OAUTH_CONFIG_ID`, hệ thống sẽ dừng trước khi redirect và hiển thị hướng dẫn thay vì
 gây lỗi `Invalid Scopes`.
 
-### Đăng nhập Facebook và giới hạn dữ liệu profile
+### Đọc bài viết profile Facebook
 
-Nút **Đăng nhập bằng Facebook OAuth 2.0** dùng luồng `basic` với scope ổn định
-`public_profile`, tạo user Facebook và session HttpOnly tại `/api/auth/me`. Luồng này không
-gửi các scope cũ như `email`, `user_posts` hoặc `user_photos`, vì các scope đó có thể bị Meta
-từ chối hoặc không còn được cấp cho ứng dụng mới. Bài đăng cần đọc từ Fanpage phải dùng nút
-OAuth Fanpage với Page Access Token và các quyền Page đã được Meta cấp; không thể dùng
-`public_profile` để đọc bài đăng cá nhân tùy ý.
+Nút **Đăng nhập bằng Facebook OAuth 2.0** dùng luồng `profile`. Để thử đọc bài viết cá nhân,
+đặt scope trong `.env`:
+
+```env
+META_OAUTH_PROFILE_SCOPES=public_profile,user_posts,user_photos
+```
+
+Sau OAuth, panel **Bài viết cá nhân** gọi `/api/facebook/profile/posts`, backend dùng User
+Access Token đã mã hóa để gọi `/me/posts`. Nếu Meta trả lỗi quyền hoặc trả danh sách rỗng,
+token production chưa được cấp `user_posts`, app chưa qua App Review, hoặc Meta không cho
+phép quyền này với app hiện tại. Code không thể vượt qua giới hạn đó. Bài viết Fanpage vẫn
+dùng Page Access Token và endpoint `/{page-id}/posts` riêng.
 
 ### Đồng bộ bài đăng Facebook tự động
 

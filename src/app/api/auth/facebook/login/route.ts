@@ -45,6 +45,9 @@ export async function GET(req: Request) {
   // `email` không bắt buộc để kết nối Fanpage và thường gây Invalid Scopes
   // khi app chưa bật Facebook Login với quyền email.
   let scopes = 'public_profile';
+  if (scopeType === 'profile') {
+    scopes = process.env.META_OAUTH_PROFILE_SCOPES || 'public_profile';
+  }
   if (scopeType === 'ads') {
     scopes = process.env.META_OAUTH_ADS_SCOPES || 'ads_management,ads_read';
   }
