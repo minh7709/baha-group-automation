@@ -8,17 +8,35 @@ generator client {
 }
 
 model User {
-  id                String     @id @default(cuid())
-  email             String     @unique
+  id                String          @id @default(cuid())
+  email             String          @unique
   passwordHash      String
   name              String
-  role              String     @default("USER") // USER | FOUNDER | ADMIN
-  emailVerified     Boolean    @default(false)
+  role              String          @default("USER") // USER | FOUNDER | ADMIN
+  emailVerified     Boolean         @default(false)
   verificationToken String?
   tokenExpiry       DateTime?
   campaigns         Campaign[]
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  connectedPages    ConnectedPage[] // 1 user sở hữu nhiều Fanpage (Multi-tenant OAuth)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model ConnectedPage {
+  id               String   @id @default(cuid())
+  pageId           String   // Facebook Page ID (duy nhất từ Meta)
+  pageName         String   // Tên Fanpage
+  pageCategory     String?  // Danh mục trang
+  pageAccessToken  String   // Page Token vĩnh viễn dùng để đăng bài
+  instagramId      String?  // Instagram Business ID (nếu có liên kết)
+  
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, pageId]) // Đảm bảo 1 user không lưu trùng 1 page 2 lần
 }
 
 model Campaign {
@@ -86,4 +104,3 @@ model AuditLog {
   details    String
   timestamp  DateTime @default(now())
 }
-

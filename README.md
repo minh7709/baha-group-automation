@@ -75,6 +75,26 @@ Dự án sử dụng Next.js App Router fullstack chuẩn, sẵn sàng deploy 1-
    git push -u origin main
    ```
 2. Truy cập [vercel.com](https://vercel.com) ➔ Chọn **Add New Project** ➔ Chọn repository vừa đẩy.
-3. Thêm các biến môi trường trong mục **Environment Variables** (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `META_API_MODE=MOCK`).
+3. Thêm các biến môi trường trong mục **Environment Variables** (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `META_API_MODE=MOCK`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`).
 4. Bấm **Deploy**. Website sẽ hoạt động online 24/7 với đường link HTTPS miễn phí!
+
+---
+
+## 🔐 CÁC TÍNH NĂNG MỞ RỘNG ĐÃ TRIỂN KHAI
+
+### 1. Đăng Nhập / Đăng Ký Xác Thực OTP & Prisma Database
+- Hệ thống hỗ trợ đăng ký tài khoản với mã xác thực OTP 6 số (gửi qua email hoặc hiển thị console/toast mô phỏng).
+- Lưu trữ tài khoản an toàn với mã hóa mật khẩu SHA-256 + Salt.
+- Chuẩn bị sẵn file `prisma/schema.prisma` và lớp lưu trữ bền vững hybrid JSON (`src/lib/storage.ts`) để chạy mượt mà trên mọi môi trường.
+
+### 2. Đăng Bài & Lên Lịch Fanpage Tự Động (Meta Graph API 0đ)
+- Hỗ trợ đăng bài viết kèm hình ảnh, video, liên kết trực tiếp lên Fanpage Facebook hoàn toàn miễn phí.
+- Lên lịch đăng bài tự động (`scheduled_publish_time`) theo giờ Việt Nam.
+- Tự động bắn thông báo xác nhận kèm link bài viết vào Telegram Bot.
+
+### 3. Kết Nối Fanpage Đa Khách Hàng (Facebook OAuth 2.0 Multi-Tenant)
+- Người dùng chỉ cần bấm nút **"Kết nối Facebook"**, cấp quyền `pages_show_list`, `pages_manage_posts`, hệ thống tự động đổi Long-lived User Token thành Page Access Token vĩnh viễn (Never Expire).
+- Khách hàng không bao giờ phải tự lấy access token thủ công.
+- Hỗ trợ chế độ Test Mô Phỏng (**OAuth Mock Mode**) giúp test ngay lập tức mà không cần tài khoản Meta Verified App.
+
 

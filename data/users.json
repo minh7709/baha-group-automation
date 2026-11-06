@@ -1,0 +1,12 @@
+[
+  {
+    "id": "usr-founder-baha",
+    "email": "founder@bahagroup.vn",
+    "name": "Diệu BaHa (Founder)",
+    "passwordHash": "$2a$10$wT3W4mZgP6o9U1QY1eGZgOUqV4L3v4Rz9Y2dG0q1w7L6o8v5a4m6",
+    "role": "FOUNDER",
+    "emailVerified": true,
+    "createdAt": "2026-11-03T14:00:00+07:00",
+    "updatedAt": "2026-11-03T14:00:00+07:00"
+  }
+]

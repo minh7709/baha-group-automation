@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   FolderOpen, Send, AlertOctagon, CheckCircle2, Clock, Trash2, 
-  ExternalLink, PlayCircle, Eye, ShieldCheck, AlertCircle 
+  ExternalLink, PlayCircle, Eye, ShieldCheck, AlertCircle, Globe 
 } from 'lucide-react';
 import { CampaignData, CampaignStatus } from '@/lib/types';
 
@@ -14,6 +14,7 @@ interface CampaignListProps {
   onSendTelegram: (campaign: CampaignData) => void;
   onStopEmergency: (campaign: CampaignData) => void;
   onOpenPilot: (campaign: CampaignData) => void;
+  onPublishFacebook: (campaign: CampaignData) => void;
 }
 
 export const CampaignList: React.FC<CampaignListProps> = ({
@@ -23,6 +24,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
   onSendTelegram,
   onStopEmergency,
   onOpenPilot,
+  onPublishFacebook,
 }) => {
   const [filter, setFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
@@ -178,6 +180,16 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                 >
                   <Send className="w-3.5 h-3.5 text-sky-400" />
                   <span>Bắn Telegram</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onPublishFacebook(camp)}
+                  title="Đăng hoặc lên lịch bài viết lên Fanpage Facebook (Meta Graph API 0đ)"
+                  className="px-3 py-1.5 bg-[#1e293b] hover:bg-[#334155] text-[#38bdf8] border border-[#38bdf8]/40 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition shadow-sm active:scale-95"
+                >
+                  <Globe className="w-3.5 h-3.5 text-[#38bdf8]" />
+                  <span>Đăng Fanpage (0đ)</span>
                 </button>
 
                 {camp.status === 'ACTIVE' || camp.status === 'CREATED_PAUSED' ? (

@@ -9,9 +9,11 @@ import { CampaignList } from '@/components/CampaignList';
 import { TelegramSettingsModal } from '@/components/TelegramSettingsModal';
 import { PilotLaunchCenter } from '@/components/PilotLaunchCenter';
 import { AuthModal } from '@/components/AuthModal';
+import { FacebookPublishModal } from '@/components/FacebookPublishModal';
+import { ConnectedPagesModal } from '@/components/ConnectedPagesModal';
 import { CampaignData } from '@/lib/types';
 import { MANDATORY_DEMO_SCENARIO } from '@/lib/default-scenarios';
-import { Sparkles, Layers, List, CheckCircle2, AlertOctagon, UserCheck } from 'lucide-react';
+import { Sparkles, Layers, List, CheckCircle2, AlertOctagon, UserCheck, Globe, Link2 } from 'lucide-react';
 
 export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
@@ -29,6 +31,9 @@ export default function HomePage() {
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
   const [isPilotOpen, setIsPilotOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isFacebookModalOpen, setIsFacebookModalOpen] = useState(false);
+  const [isPagesModalOpen, setIsPagesModalOpen] = useState(false);
+  const [facebookTargetCampaign, setFacebookTargetCampaign] = useState<Partial<CampaignData> | null>(null);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [metaMode, setMetaMode] = useState<'MOCK' | 'REAL'>('MOCK');
   const [toast, setToast] = useState<string | null>(null);
@@ -55,6 +60,14 @@ export default function HomePage() {
   useEffect(() => {
     fetchCampaigns();
     if (typeof window !== 'undefined') {
+      // Kiểm tra tham số OAuth chuyển hướng về
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('oauth') === 'success') {
+        const count = urlParams.get('count') || 'các';
+        showToast(`Liên kết Facebook OAuth thành công! Đã đồng bộ ${count} Fanpage vào tài khoản.`);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
       const savedUser = localStorage.getItem('baha_current_user');
       if (savedUser) {
         try {
@@ -96,7 +109,7 @@ export default function HomePage() {
   // Bắt đầu chiến dịch từ ô nhập ngôn ngữ tự nhiên
   const handleStartFromPrompt = (promptText: string) => {
     const text = promptText.toLowerCase();
-
+    
     // Phân tích ý định cơ bản (Intent Extraction)
     let location = 'TP.Hồ Chí Minh';
     if (text.includes('hà nội')) location = 'TP.Hà Nội';
@@ -254,204 +267,257 @@ export default function HomePage() {
   const activeDraft = campaigns.find((c) => c.status === 'DRAFT');
 
   return (
-      <div className="min-h-screen bg-[#0b0f19] text-[#dfe2f1] flex flex-col font-sans selection:bg-[#38bdf8] selection:text-black">
-        {/* Toast Notification */}
-        {toast && (
-            <div className="fixed bottom-6 right-6 z-50 bg-[#111827] border border-[#10b981] text-[#10b981] px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 text-sm animate-bounce">
-              <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
-              <span>{toast}</span>
-            </div>
+    <div className="min-h-screen bg-[#0b0f19] text-[#dfe2f1] flex flex-col font-sans selection:bg-[#38bdf8] selection:text-black">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#111827] border border-[#10b981] text-[#10b981] px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 text-sm animate-bounce">
+          <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
+          <span>{toast}</span>
+        </div>
       )}
 
-            {/* Top Header Bar */}
-            <HeaderStats
-              stats={stats}
-              onOpenTelegramModal={() => setIsTelegramModalOpen(true)}
-              onLoadDemoScenario={handleLoadDemoScenario}
-              metaMode={metaMode}
-              onToggleMetaMode={() => {
-                const next = metaMode === 'MOCK' ? 'REAL' : 'MOCK';
-                setMetaMode(next);
-                showToast(`Đã chuyển chế độ Meta sang: ${next}`);
+      {/* Top Header Bar */}
+      <HeaderStats
+        stats={stats}
+        onOpenTelegramModal={() => setIsTelegramModalOpen(true)}
+        onLoadDemoScenario={handleLoadDemoScenario}
+        metaMode={metaMode}
+        onToggleMetaMode={() => {
+          const next = metaMode === 'MOCK' ? 'REAL' : 'MOCK';
+          setMetaMode(next);
+          showToast(`Đã chuyển chế độ Meta sang: ${next}`);
+        }}
+        currentUser={currentUser}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+      />
+
+      {/* Sub Navigation Bar - Stitch Cyber Theme */}
+      <div className="bg-[#0b0f19] border-b border-[#1e293b] px-4 py-2.5 text-xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setView('dashboard')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                view === 'dashboard' ? 'bg-[#1e293b] text-[#38bdf8]' : 'text-[#94a3b8] hover:text-white'
+              }`}
+            >
+              Màn hình chính
+            </button>
+            <button
+              onClick={() => {
+                setSelectedCampaign(null);
+                setView('wizard');
               }}
-              currentUser={currentUser}
-              onOpenAuthModal={() => setIsAuthModalOpen(true)}
+              className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                view === 'wizard' ? 'bg-[#1e293b] text-[#38bdf8]' : 'text-[#94a3b8] hover:text-white'
+              }`}
+            >
+              Thiết lập chiến dịch (8 Bước)
+            </button>
+            <button
+              onClick={() => setView('campaigns')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                view === 'campaigns' ? 'bg-[#1e293b] text-[#38bdf8]' : 'text-[#94a3b8] hover:text-white'
+              }`}
+            >
+              Quảng cáo của tôi ({campaigns.length})
+            </button>
+
+            {/* Nút Đăng bài Fanpage 0đ nhanh */}
+            <button
+              onClick={() => {
+                setFacebookTargetCampaign(null);
+                setIsFacebookModalOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-lg font-bold bg-[#1e293b] hover:bg-[#334155] text-[#38bdf8] border border-[#38bdf8]/40 transition flex items-center gap-1.5 shadow-sm"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#38bdf8]" />
+              <span>Đăng Fanpage (0đ)</span>
+            </button>
+
+            {/* Nút Quản lý Fanpage OAuth 2.0 Multi-tenant */}
+            <button
+              onClick={() => setIsPagesModalOpen(true)}
+              className="px-3 py-1.5 rounded-lg font-bold bg-[#1e293b] hover:bg-[#334155] text-[#10b981] border border-[#10b981]/40 transition flex items-center gap-1.5 shadow-sm"
+            >
+              <Link2 className="w-3.5 h-3.5 text-[#10b981]" />
+              <span>Kênh Fanpage (OAuth)</span>
+            </button>
+          </div>
+
+          <div className="text-[#64748b] hidden lg:flex items-center gap-2">
+            <span>Chính sách BaHa: Ngân sách ngày ≤ 500k</span>
+            <span>•</span>
+            <span>Meta: Luôn TẠM DỪNG</span>
+            <span>•</span>
+            <span className="text-[#10b981] font-semibold">Báo Telegram thật</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+        {view === 'dashboard' && (
+          <div className="space-y-6">
+            {/* Quick Prompt Input Box matching BaHa screenshot */}
+            <QuickPromptBox
+              onStartCampaign={handleStartFromPrompt}
+              onResumeDraft={() => {
+                if (activeDraft) {
+                  setSelectedCampaign(activeDraft);
+                  setView('wizard');
+                } else {
+                  showToast("Hiện không có bản nháp nào, tạo bản nháp mới.");
+                  setSelectedCampaign(null);
+                  setView('wizard');
+                }
+              }}
+              onViewCampaigns={() => setView('campaigns')}
+              onAdvancedSetup={() => {
+                setSelectedCampaign(null);
+                setView('wizard');
+              }}
             />
 
-              {/* Sub Navigation Bar - Stitch Cyber Theme */}
-              <div className="bg-[#0b0f19] border-b border-[#1e293b] px-4 py-2.5 text-xs">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setView('dashboard')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition ${view === 'dashboard' ? 'bg-[#1e293b] text-[#38bdf8]' : 'text-[#94a3b8] hover:text-white'
-                        }`}
-                    >
-                      Màn hình chính
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedCampaign(null);
-                        setView('wizard');
-                      }}
-              className={`px-3 py-1.5 rounded-lg font-bold transition ${view === 'wizard' ? 'bg-[#1e293b] text-[#38bdf8]' : 'text-[#94a3b8] hover:text-white'
-                        }`}
-                    >
-                      Thiết lập chiến dịch (8 Bước)
-                    </button>
-                    <button
-                      onClick={() => setView('campaigns')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition ${view === 'campaigns' ? 'bg-[#1e293b] text-[#38bdf8]' : 'text-[#94a3b8] hover:text-white'
-                        }`}
-                    >
-                      Quảng cáo của tôi ({campaigns.length})
-                    </button>
-                  </div>
+            {/* Next Action Card matching BaHa screenshot */}
+            <NextActionCard
+              activeDraft={activeDraft}
+              onContinue={() => {
+                if (activeDraft) {
+                  setSelectedCampaign(activeDraft);
+                  setView('wizard');
+                }
+              }}
+              otherDraftsCount={Math.max(0, campaigns.filter((c) => c.status === 'DRAFT').length - 1)}
+            />
 
-                    <div className="text-[#64748b] hidden md:flex items-center gap-2">
-                      <span>Chính sách BaHa: Ngân sách ngày ≤ 500k</span>
-                      <span>•</span>
-                      <span>Meta: Luôn TẠM DỪNG</span>
-                      <span>•</span>
-                      <span className="text-[#10b981] font-semibold">Báo Telegram thật</span>
-                    </div>
-                  </div>
-                </div>
+            {/* Recent Campaigns Overview */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-[#f8fafc]">Chiến dịch gần đây</h3>
+                <button
+                  onClick={() => setView('campaigns')}
+                  className="text-xs text-[#38bdf8] hover:underline font-bold"
+                >
+                  Xem tất cả ({campaigns.length}) ➔
+                </button>
+              </div>
 
-                {/* Main Content Area */}
-                <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
-                  {view === 'dashboard' && (
-                    <div className="space-y-6">
-                      {/* Quick Prompt Input Box matching BaHa screenshot */}
-                      <QuickPromptBox
-                        onStartCampaign={handleStartFromPrompt}
-                        onResumeDraft={() => {
-                          if (activeDraft) {
-                            setSelectedCampaign(activeDraft);
-                            setView('wizard');
-                          } else {
-                            showToast("Hiện không có bản nháp nào, tạo bản nháp mới.");
-                            setSelectedCampaign(null);
-                            setView('wizard');
-                          }
-                        }}
-                        onViewCampaigns={() => setView('campaigns')}
-                        onAdvancedSetup={() => {
-                          setSelectedCampaign(null);
-                          setView('wizard');
-                        }}
-                      />
+              <CampaignList
+                campaigns={campaigns.slice(0, 3)}
+                onSelectCampaign={(c) => {
+                  setSelectedCampaign(c);
+                  setView('wizard');
+                }}
+                onDeleteCampaign={handleDeleteCampaign}
+                onSendTelegram={handleSendTelegram}
+                onStopEmergency={handleStopEmergency}
+                onOpenPilot={(c) => {
+                  setPilotCampaign(c);
+                  setIsPilotOpen(true);
+                }}
+                onPublishFacebook={(c) => {
+                  setFacebookTargetCampaign(c);
+                  setIsFacebookModalOpen(true);
+                }}
+              />
+            </div>
+          </div>
+        )}
 
-                      {/* Next Action Card matching BaHa screenshot */}
-                      <NextActionCard
-                        activeDraft={activeDraft}
-                        onContinue={() => {
-                          if (activeDraft) {
-                            setSelectedCampaign(activeDraft);
-                            setView('wizard');
-                          }
-                        }}
-                        otherDraftsCount={Math.max(0, campaigns.filter((c) => c.status === 'DRAFT').length - 1)}
-                      />
+        {view === 'wizard' && (
+          <CampaignWizard
+            initialCampaign={selectedCampaign || undefined}
+            onSaveDraft={handleSaveDraft}
+            onComplete={(c) => {
+              showToast("Đã hoàn thành thiết lập chiến dịch!");
+              fetchCampaigns();
+            }}
+            onOpenTelegramModal={() => setIsTelegramModalOpen(true)}
+            onOpenPilot={(c) => {
+              setPilotCampaign(c);
+              setIsPilotOpen(true);
+            }}
+            metaMode={metaMode}
+          />
+        )}
 
-                      {/* Recent Campaigns Overview */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-base font-bold text-[#f8fafc]">Chiến dịch gần đây</h3>
-                          <button
-                            onClick={() => setView('campaigns')}
-                            className="text-xs text-[#38bdf8] hover:underline font-bold"
-                          >
-                            Xem tất cả ({campaigns.length}) ➔
-                          </button>
-                        </div>
+        {view === 'campaigns' && (
+          <CampaignList
+            campaigns={campaigns}
+            onSelectCampaign={(c) => {
+              setSelectedCampaign(c);
+              setView('wizard');
+            }}
+            onDeleteCampaign={handleDeleteCampaign}
+            onSendTelegram={handleSendTelegram}
+            onStopEmergency={handleStopEmergency}
+            onOpenPilot={(c) => {
+              setPilotCampaign(c);
+              setIsPilotOpen(true);
+            }}
+            onPublishFacebook={(c) => {
+              setFacebookTargetCampaign(c);
+              setIsFacebookModalOpen(true);
+            }}
+          />
+        )}
+      </main>
 
-                        <CampaignList
-                          campaigns={campaigns.slice(0, 3)}
-                          onSelectCampaign={(c) => {
-                            setSelectedCampaign(c);
-                            setView('wizard');
-                          }}
-                          onDeleteCampaign={handleDeleteCampaign}
-                          onSendTelegram={handleSendTelegram}
-                          onStopEmergency={handleStopEmergency}
-                          onOpenPilot={(c) => {
-                            setPilotCampaign(c);
-                            setIsPilotOpen(true);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+      {/* Footer */}
+      <footer className="bg-[#0b0f19] border-t border-[#1e293b] py-5 px-6 text-center text-xs text-[#64748b]">
+        <p className="font-semibold text-[#94a3b8]">BAHA GROUP — Hệ thống Đánh giá Năng lực Thực chiến Tuyển dụng</p>
+        <p className="mt-1 text-[11px] text-[#475569]">
+          Giao diện theo chuẩn Stitch Design System: Autonomous Kinetic Pulse. Thiết lập quảng cáo trả phí an toàn tài chính.
+        </p>
+      </footer>
 
-                  {view === 'wizard' && (
-                    <CampaignWizard
-                      initialCampaign={selectedCampaign || undefined}
-                      onSaveDraft={handleSaveDraft}
-                      onComplete={(c) => {
-                        showToast("Đã hoàn thành thiết lập chiến dịch!");
-                        fetchCampaigns();
-                      }}
-                      onOpenTelegramModal={() => setIsTelegramModalOpen(true)}
-                      onOpenPilot={(c) => {
-                        setPilotCampaign(c);
-                        setIsPilotOpen(true);
-                      }}
-                      metaMode={metaMode}
-                    />
-                  )}
+      {/* Telegram Configuration Modal */}
+      <TelegramSettingsModal
+        isOpen={isTelegramModalOpen}
+        onClose={() => setIsTelegramModalOpen(false)}
+      />
 
-                  {view === 'campaigns' && (
-                    <CampaignList
-                      campaigns={campaigns}
-                      onSelectCampaign={(c) => {
-                        setSelectedCampaign(c);
-                        setView('wizard');
-                      }}
-                      onDeleteCampaign={handleDeleteCampaign}
-                      onSendTelegram={handleSendTelegram}
-                      onStopEmergency={handleStopEmergency}
-                      onOpenPilot={(c) => {
-                        setPilotCampaign(c);
-                        setIsPilotOpen(true);
-                      }}
-                    />
-                  )}
-                </main>
+      {/* Pilot Launch Gate Modal */}
+      {pilotCampaign && (
+        <PilotLaunchCenter
+          campaign={pilotCampaign}
+          isOpen={isPilotOpen}
+          onClose={() => setIsPilotOpen(false)}
+          onStartPilot={handleStartPilot}
+          onStopEmergency={handleStopEmergency}
+        />
+      )}
 
-                {/* Footer */}
-                    <footer className="bg-[#0b0f19] border-t border-[#1e293b] py-5 px-6 text-center text-xs text-[#64748b]">
-                      <p className="font-semibold text-[#94a3b8]">BAHA GROUP — Hệ thống Đánh giá Năng lực Thực chiến Tuyển dụng</p>
-                      <p className="mt-1 text-[11px] text-[#475569]">
-                        Giao diện theo chuẩn Stitch Design System: Autonomous Kinetic Pulse. Thiết lập quảng cáo trả phí an toàn tài chính.
-                      </p>
-                    </footer>
+      {/* Auth Modal with Email OTP Verification */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
-                    {/* Telegram Configuration Modal */}
-                    <TelegramSettingsModal
-                      isOpen={isTelegramModalOpen}
-                      onClose={() => setIsTelegramModalOpen(false)}
-                    />
+      {/* Facebook Publish Modal (Meta Graph API 0đ) */}
+      <FacebookPublishModal
+        isOpen={isFacebookModalOpen}
+        onClose={() => setIsFacebookModalOpen(false)}
+        campaign={facebookTargetCampaign}
+        onPublishedSuccess={() => {
+          showToast("Đã đăng bài lên Fanpage thành công!");
+          fetchCampaigns();
+        }}
+        onOpenConnectedPages={() => setIsPagesModalOpen(true)}
+      />
 
-                    {/* Pilot Launch Gate Modal */}
-                    {pilotCampaign && (
-                      <PilotLaunchCenter
-                        campaign={pilotCampaign}
-                        isOpen={isPilotOpen}
-                        onClose={() => setIsPilotOpen(false)}
-                        onStartPilot={handleStartPilot}
-                        onStopEmergency={handleStopEmergency}
-                      />
-                    )}
-
-                    {/* Auth Modal with Email OTP Verification */}
-                    <AuthModal
-                      isOpen={isAuthModalOpen}
-                      onClose={() => setIsAuthModalOpen(false)}
-                      onLoginSuccess={handleLoginSuccess}
-                      currentUser={currentUser}
-                      onLogout={handleLogout}
-                    />
-                  </div>
-                  );
+      {/* Multi-Tenant Facebook Connected Pages Modal */}
+      <ConnectedPagesModal
+        isOpen={isPagesModalOpen}
+        onClose={() => setIsPagesModalOpen(false)}
+        onSelectPage={(page) => {
+          showToast(`Đã chọn Fanpage: ${page.pageName}`);
+        }}
+      />
+    </div>
+  );
 }

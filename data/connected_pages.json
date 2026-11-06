@@ -1,0 +1,32 @@
+[
+  {
+    "id": "page-1",
+    "pageId": "102938475610293",
+    "pageName": "Diệu BaHa - Quản Trị Thực Chiến",
+    "pageCategory": "Kinh doanh & Đào tạo",
+    "pageAccessToken": "EAAGm0PXqB_mock_token_102938475610293",
+    "userId": "usr-founder-baha",
+    "createdAt": "2026-11-03T14:00:00+07:00",
+    "updatedAt": "2026-11-03T14:00:00+07:00"
+  },
+  {
+    "id": "page-2",
+    "pageId": "102938475610294",
+    "pageName": "Baha Homes - Thiết Kế Thi Công Nội Thất",
+    "pageCategory": "Thiết kế & Kiến trúc",
+    "pageAccessToken": "EAAGm0PXqB_mock_token_102938475610294",
+    "userId": "usr-founder-baha",
+    "createdAt": "2026-11-03T14:00:00+07:00",
+    "updatedAt": "2026-11-03T14:00:00+07:00"
+  },
+  {
+    "id": "page-3",
+    "pageId": "102938475610295",
+    "pageName": "Diệu BaHa - Spa & Thẩm Mỹ Viện TP.HCM",
+    "pageCategory": "Sắc đẹp & Sức khỏe",
+    "pageAccessToken": "EAAGm0PXqB_mock_token_102938475610295",
+    "userId": "usr-founder-baha",
+    "createdAt": "2026-11-03T14:00:00+07:00",
+    "updatedAt": "2026-11-03T14:00:00+07:00"
+  }
+]
