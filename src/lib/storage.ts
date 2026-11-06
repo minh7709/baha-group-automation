@@ -9,6 +9,7 @@ const DATA_FILE = path.join(DATA_DIR, 'campaigns.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PAGES_FILE = path.join(DATA_DIR, 'connected_pages.json');
 const POSTS_FILE = path.join(DATA_DIR, 'facebook_posts.json');
+const USE_LOCAL_FILE_STORAGE = process.env.VERCEL !== '1' && process.env.READ_ONLY_FILESYSTEM !== 'true';
 
 export interface UserRecord {
   id: string;
@@ -52,14 +53,19 @@ export interface FacebookPostStorageRecord {
 }
 
 function ensureDataFiles() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!USE_LOCAL_FILE_STORAGE) {
+    return;
   }
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(INITIAL_CAMPAIGNS, null, 2), 'utf-8');
-  }
-  if (!fs.existsSync(USERS_FILE)) {
-    const defaultFounder: UserRecord = {
+
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(DATA_FILE)) {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(INITIAL_CAMPAIGNS, null, 2), 'utf-8');
+    }
+    if (!fs.existsSync(USERS_FILE)) {
+      const defaultFounder: UserRecord = {
       id: 'usr-founder-baha',
       email: 'founder@bahagroup.vn',
       name: 'Diệu BaHa (Founder)',
@@ -68,11 +74,11 @@ function ensureDataFiles() {
       emailVerified: true,
       createdAt: '2026-11-03T14:00:00+07:00',
       updatedAt: '2026-11-03T14:00:00+07:00',
-    };
-    fs.writeFileSync(USERS_FILE, JSON.stringify([defaultFounder], null, 2), 'utf-8');
-  }
-  if (!fs.existsSync(PAGES_FILE)) {
-    const defaultPages: ConnectedPageRecord[] = [
+      };
+      fs.writeFileSync(USERS_FILE, JSON.stringify([defaultFounder], null, 2), 'utf-8');
+    }
+    if (!fs.existsSync(PAGES_FILE)) {
+      const defaultPages: ConnectedPageRecord[] = [
       {
         id: 'page-1',
         pageId: '102938475610293',
@@ -103,11 +109,32 @@ function ensureDataFiles() {
         createdAt: '2026-11-03T14:00:00+07:00',
         updatedAt: '2026-11-03T14:00:00+07:00',
       },
-    ];
-    fs.writeFileSync(PAGES_FILE, JSON.stringify(defaultPages, null, 2), 'utf-8');
+      ];
+      fs.writeFileSync(PAGES_FILE, JSON.stringify(defaultPages, null, 2), 'utf-8');
+    }
+    if (!fs.existsSync(POSTS_FILE)) {
+      fs.writeFileSync(POSTS_FILE, '[]', 'utf-8');
+    }
+  } catch (error: any) {
+    if (error?.code !== 'EROFS' && error?.code !== 'EACCES') {
+      throw error;
+    }
   }
-  if (!fs.existsSync(POSTS_FILE)) {
-    fs.writeFileSync(POSTS_FILE, '[]', 'utf-8');
+}
+
+function writeLocalFile(filePath: string, value: string): boolean {
+  if (!USE_LOCAL_FILE_STORAGE) {
+    return false;
+  }
+
+  try {
+    fs.writeFileSync(filePath, value, 'utf-8');
+    return true;
+  } catch (error: any) {
+    if (error?.code !== 'EROFS' && error?.code !== 'EACCES') {
+      console.warn(`Không thể ghi file local ${filePath}:`, error?.message || error);
+    }
+    return false;
   }
 }
 
@@ -139,7 +166,7 @@ export function saveCampaign(campaign: CampaignData): CampaignData {
     campaigns.unshift({ ...campaign, updatedAt: new Date().toISOString() });
   }
 
-  fs.writeFileSync(DATA_FILE, JSON.stringify(campaigns, null, 2), 'utf-8');
+  writeLocalFile(DATA_FILE, JSON.stringify(campaigns, null, 2));
 
   // Đồng bộ thời gian thực vào SQLite via Prisma (Không dùng mock)
   const prisma = getPrisma();
@@ -232,7 +259,7 @@ export function deleteCampaign(id: string): boolean {
   const campaigns = getAllCampaigns();
   const filtered = campaigns.filter((c) => c.id !== id && c.code !== id);
   if (filtered.length !== campaigns.length) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    writeLocalFile(DATA_FILE, JSON.stringify(filtered, null, 2));
     const prisma = getPrisma();
     if (prisma) {
       prisma.campaign.deleteMany({ where: { OR: [{ id }, { code: id }] } })
@@ -276,7 +303,7 @@ export function saveUser(user: UserRecord): UserRecord {
     users.push({ ...user, updatedAt: new Date().toISOString() });
   }
 
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  writeLocalFile(USERS_FILE, JSON.stringify(users, null, 2));
 
   // Đồng bộ User vào SQLite via Prisma
   const prisma = getPrisma();
@@ -344,7 +371,7 @@ export function saveConnectedPage(page: ConnectedPageRecord): ConnectedPageRecor
     pages.unshift({ ...page, updatedAt: new Date().toISOString() });
   }
 
-  fs.writeFileSync(PAGES_FILE, JSON.stringify(pages, null, 2), 'utf-8');
+  writeLocalFile(PAGES_FILE, JSON.stringify(pages, null, 2));
 
   // Đồng bộ ConnectedPage vào SQLite via Prisma
   const prisma = getPrisma();
@@ -379,7 +406,7 @@ export function deleteConnectedPage(id: string): boolean {
   const pages = getAllConnectedPages();
   const filtered = pages.filter((p) => p.id !== id && p.pageId !== id);
   if (filtered.length !== pages.length) {
-    fs.writeFileSync(PAGES_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    writeLocalFile(PAGES_FILE, JSON.stringify(filtered, null, 2));
     const prisma = getPrisma();
     if (prisma) {
       prisma.connectedPage.deleteMany({ where: { OR: [{ id }, { pageId: id }] } })
@@ -437,7 +464,7 @@ export async function saveFacebookPosts(posts: FacebookPostStorageRecord[]): Pro
   const merged = Array.from(byId.values())
     .sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime())
     .slice(0, 5000);
-  fs.writeFileSync(POSTS_FILE, JSON.stringify(merged, null, 2), 'utf-8');
+  writeLocalFile(POSTS_FILE, JSON.stringify(merged, null, 2));
   const prisma = getPrisma();
   if (prisma) {
     try {
