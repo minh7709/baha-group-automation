@@ -6,13 +6,15 @@ import { CAMPAIGN_SAFETY_LIMITS } from '@/lib/campaign-policy';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { postId, pageId } = body;
+    const { postId, pageId, source = 'page', profilePost } = body;
     if (!postId || !pageId) {
       return NextResponse.json({ success: false, error: 'Thiếu postId hoặc pageId.' }, { status: 400 });
     }
 
     const page = await getConnectedPageByIdAsync(pageId);
-    const post = (await getFacebookPosts(pageId)).find((item) => item.id === postId);
+    const post = source === 'profile'
+      ? profilePost
+      : (await getFacebookPosts(pageId)).find((item) => item.id === postId);
     if (!page || !post) {
       return NextResponse.json({ success: false, error: 'Bài đăng không tồn tại hoặc Fanpage chưa được liên kết.' }, { status: 404 });
     }
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
       callToAction: body.callToAction || 'LEARN_MORE',
       pageName: page.pageName,
       pageId: page.pageId,
-      facebookPostId: post.id,
+      facebookPostId: source === 'page' ? post.id : undefined,
       adAccountId: process.env.META_AD_ACCOUNT_ID,
       status: 'DRAFT',
       version: 1,

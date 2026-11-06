@@ -429,7 +429,13 @@ export default function HomePage() {
                 showToast('Đã tạo bản nháp từ bài đăng. Hãy xem lại và phê duyệt trước khi gửi lên Meta.');
               }}
             />
-            <FacebookProfilePostsPanel />
+            <FacebookProfilePostsPanel
+              onCreateAdDraft={(campaign) => {
+                setSelectedCampaign(campaign);
+                setView('wizard');
+                showToast('Đã tạo bản nháp từ nội dung profile trên Fanpage đích. Hãy xem lại trước khi gửi lên Meta.');
+              }}
+            />
 
             {/* Recent Campaigns Overview */}
             <div className="space-y-3">
