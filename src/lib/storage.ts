@@ -345,6 +345,59 @@ export function getAllConnectedPages(): ConnectedPageRecord[] {
     console.error("Lỗi đọc connected pages:", err);
     return [];
   }
+
+}
+
+function mapConnectedPage(page: {
+    id: string;
+    pageId: string;
+    pageName: string;
+    pageCategory: string | null;
+    pageAccessToken: string;
+    instagramId: string | null;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+}): ConnectedPageRecord {
+  return {
+    id: page.id,
+    pageId: page.pageId,
+    pageName: page.pageName,
+    pageCategory: page.pageCategory || undefined,
+    pageAccessToken: page.pageAccessToken,
+    instagramId: page.instagramId || undefined,
+    userId: page.userId,
+    createdAt: page.createdAt.toISOString(),
+    updatedAt: page.updatedAt.toISOString(),
+  };
+}
+
+export async function getAllConnectedPagesAsync(): Promise<ConnectedPageRecord[]> {
+  const prisma = getPrisma();
+  if (prisma) {
+    try {
+      const pages = await prisma.connectedPage.findMany({ orderBy: { updatedAt: 'desc' } });
+      return pages.map(mapConnectedPage);
+    } catch (error: any) {
+      console.warn('Không đọc được ConnectedPage từ Prisma, dùng JSON fallback:', error.message);
+    }
+  }
+  return getAllConnectedPages();
+}
+
+export async function getConnectedPageByIdAsync(pageId: string): Promise<ConnectedPageRecord | undefined> {
+  const prisma = getPrisma();
+  if (prisma) {
+    try {
+      const page = await prisma.connectedPage.findFirst({
+        where: { OR: [{ pageId }, { id: pageId }] },
+      });
+      if (page) return mapConnectedPage(page);
+    } catch (error: any) {
+      console.warn('Không đọc được ConnectedPage từ Prisma:', error.message);
+    }
+  }
+  return getConnectedPageById(pageId);
 }
 
 export function getConnectedPagesByUser(userId?: string): ConnectedPageRecord[] {

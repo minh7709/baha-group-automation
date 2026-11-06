@@ -10,6 +10,7 @@ interface PageItem {
 
 interface PostItem {
   id: string;
+  pageId: string;
   pageName: string;
   message: string;
   createdTime: string;
@@ -28,25 +29,31 @@ export const FacebookPostsPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const loadPages = async () => {
+  const loadPages = async (): Promise<PageItem[]> => {
     const res = await fetch('/api/pages');
     const data = await res.json();
-    if (data.success) {
-      setPages(data.pages || []);
-      if (!pageId && data.pages?.[0]) setPageId(data.pages[0].pageId);
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Không thể tải danh sách Fanpage.');
     }
+    const loadedPages = data.pages || [];
+    setPages(loadedPages);
+    if (!pageId && loadedPages[0]) setPageId(loadedPages[0].pageId);
+    return loadedPages;
   };
 
-  const loadPosts = async (sync: boolean) => {
-    if (!pageId) return;
+  const loadPosts = async (sync: boolean, selectedPageId = pageId) => {
+    if (!selectedPageId) return;
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch(`/api/facebook/posts?pageId=${encodeURIComponent(pageId)}&sync=${sync}`);
+      const res = await fetch(`/api/facebook/posts?${sync ? 'sync=true' : `pageId=${encodeURIComponent(selectedPageId)}`}`);
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Không thể tải bài đăng.');
-      setPosts(data.posts || []);
-      setMessage(sync ? 'Đã đồng bộ bài đăng mới nhất từ Facebook.' : '');
+      const loadedPosts = data.posts || [];
+      setPosts(loadedPosts.filter((post: PostItem) => post.pageId === selectedPageId));
+      setMessage(sync
+        ? (data.errors?.length ? `Đã đồng bộ nhưng có lỗi: ${data.errors.join(' | ')}` : 'Đã đồng bộ bài đăng mới nhất từ Facebook.')
+        : '');
     } catch (error: any) {
       setMessage(error.message);
     } finally {
@@ -55,12 +62,20 @@ export const FacebookPostsPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    loadPages().catch((error) => setMessage(error.message));
+    loadPages()
+      .then((loadedPages) => {
+        if (loadedPages.length > 0) {
+          return loadPosts(true, loadedPages[0].pageId);
+        }
+        return undefined;
+      })
+      .catch((error) => setMessage(error.message));
   }, []);
 
-  useEffect(() => {
-    if (pageId) loadPosts(false).catch((error) => setMessage(error.message));
-  }, [pageId]);
+  const handlePageChange = (nextPageId: string) => {
+    setPageId(nextPageId);
+    loadPosts(false, nextPageId).catch((error) => setMessage(error.message));
+  };
 
   return (
     <section className="w-full bg-[#131722] border border-[#232b3d] rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
@@ -71,7 +86,7 @@ export const FacebookPostsPanel: React.FC = () => {
           <p className="text-xs text-gray-400">Đồng bộ nội dung và số liệu tương tác từ Fanpage đã liên kết.</p>
         </div>
         <div className="flex gap-2">
-          <select value={pageId} onChange={(event) => setPageId(event.target.value)} className="bg-[#0c0f17] border border-[#273248] rounded-lg px-3 py-2 text-xs text-gray-200">
+          <select value={pageId} onChange={(event) => handlePageChange(event.target.value)} className="bg-[#0c0f17] border border-[#273248] rounded-lg px-3 py-2 text-xs text-gray-200">
             <option value="">Chọn Fanpage</option>
             {pages.map((page) => <option key={page.pageId} value={page.pageId}>{page.pageName}</option>)}
           </select>
@@ -105,4 +120,3 @@ export const FacebookPostsPanel: React.FC = () => {
     </section>
   );
 };
-

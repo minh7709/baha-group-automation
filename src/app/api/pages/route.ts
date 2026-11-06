@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getConnectedPagesByUser, saveConnectedPage, deleteConnectedPage, ConnectedPageRecord } from '@/lib/storage';
+import { getAllConnectedPagesAsync, saveConnectedPage, deleteConnectedPage, ConnectedPageRecord } from '@/lib/storage';
 import { encryptToken, maskToken } from '@/lib/crypto';
 
 export async function GET(req: Request) {
@@ -7,7 +7,10 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId') || undefined;
 
-    const pages = getConnectedPagesByUser(userId);
+    const allPages = await getAllConnectedPagesAsync();
+    const pages = userId
+      ? allPages.filter((page) => page.userId === userId || page.userId === 'usr-founder-baha')
+      : allPages;
 
     // Không trả về pageAccessToken nhạy cảm ra client
     const safePages = pages.map((p) => ({
@@ -90,4 +93,3 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-
