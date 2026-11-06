@@ -15,6 +15,7 @@ interface CampaignListProps {
   onStopEmergency: (campaign: CampaignData) => void;
   onOpenPilot: (campaign: CampaignData) => void;
   onPublishFacebook: (campaign: CampaignData) => void;
+  onSyncInsights: (campaign: CampaignData) => void;
 }
 
 export const CampaignList: React.FC<CampaignListProps> = ({
@@ -25,6 +26,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
   onStopEmergency,
   onOpenPilot,
   onPublishFacebook,
+  onSyncInsights,
 }) => {
   const [filter, setFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
@@ -165,6 +167,13 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                     Meta ID: {camp.metaCampaignId} ({camp.isMock ? 'Mô phỏng' : 'Thật'})
                   </div>
                 )}
+                {camp.metaCampaignId && camp.metaInsightsAt && (
+                  <div className="text-[11px] text-gray-400">
+                    Đã chi: <strong className="text-amber-300">{Number(camp.metaSpend || 0).toLocaleString('vi-VN')} ₫</strong>
+                    {' · '}Lượt hiển thị: {Number(camp.metaImpressions || 0).toLocaleString('vi-VN')}
+                    {' · '}Lượt nhấp: {Number(camp.metaClicks || 0).toLocaleString('vi-VN')}
+                  </div>
+                )}
 
                 {camp.lastError && (
                   <div className="text-[11px] text-rose-400 bg-rose-950/40 border border-rose-900/60 rounded px-2 py-1 flex items-center space-x-1 mt-1">
@@ -226,6 +235,15 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                     <span>Pilot Gate</span>
                   </button>
                 )}
+                {camp.metaCampaignId && (
+                  <button
+                    type="button"
+                    onClick={() => onSyncInsights(camp)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-950/60 text-sky-300 border border-sky-800 hover:bg-sky-900"
+                  >
+                    Đồng bộ chi phí Meta
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -243,4 +261,3 @@ export const CampaignList: React.FC<CampaignListProps> = ({
     </div>
   );
 };
-

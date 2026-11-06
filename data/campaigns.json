@@ -27,12 +27,13 @@
     "primaryText": "🎯 Bạn đang tìm kiếm giải pháp tối ưu cho tôi muốn thêm khách hàng mua cho cửa hàng quần áo tại TP.Hồ Chí Minh?\n\n💡 tôi muốn thêm khách hàng mua cho cửa hàng quần áo của tôi\n🎁 ƯU ĐÃI KHỞI ĐỘNG: Tư vấn miễn phí và chiết khấu hấp dẫn cho khách hàng đầu tiên.\n\n👉 Nhấn nút bên dưới để kết nối trực tiếp với đội ngũ tư vấn!",
     "callToAction": "SEND_MESSAGE",
     "pageName": "quần áo mới",
-    "status": "DRAFT",
+    "status": "ACTIVE",
     "version": 1,
     "isMock": true,
-    "telegramSent": false,
+    "telegramSent": true,
     "createdAt": "2026-11-06T04:20:59.284Z",
-    "updatedAt": "2026-11-06T04:20:59.363Z"
+    "updatedAt": "2026-11-06T05:01:21.491Z",
+    "telegramSentAt": "2026-11-06T05:00:54.938Z"
   },
   {
     "id": "camp-1793938198919",

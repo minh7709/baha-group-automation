@@ -1,6 +1,7 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -75,7 +76,7 @@ model Campaign {
   pageName          String     @default("Diệu BaHa - Quản Trị Thực Chiến")
 
   // Bước 7: Phê duyệt & An toàn
-  status            String     @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED_INTERNAL, CREATED_PAUSED, ACTIVE, STOPPED
+  status            String     @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED_INTERNAL, CREATED_PAUSED, ACTIVE, STOPPED, INTEGRATION_ERROR
   version           Int        @default(1)
   approvalCode      String?    // BH-APR-YYYYMMDD-XXXX
   fingerprint       String?    // a651ab1de86479ab
@@ -90,6 +91,10 @@ model Campaign {
   isMock            Boolean    @default(true)
   telegramSent      Boolean    @default(false)
   telegramSentAt    DateTime?
+
+  // Theo dõi lỗi tích hợp Meta
+  lastError         String?
+  errorStep         String?
 
   auditLogs         AuditLog[]
   createdAt         DateTime   @default(now())

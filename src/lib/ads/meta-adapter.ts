@@ -1,18 +1,20 @@
 import { CampaignData } from '../types';
-import { AdsPlatformAdapter, PlatformCampaignResult, PlatformActionResult, PlatformStatusResult } from './types';
+import { AdsPlatformAdapter, PlatformCampaignResult, PlatformActionResult, PlatformStatusResult, PlatformInsightsResult } from './types';
 import { decryptToken } from '../crypto';
 
 export class MetaAdsAdapter implements AdsPlatformAdapter {
   private adAccountId: string;
   private accessToken: string;
   private apiVersion: string;
+  private pageId: string;
 
-  constructor(customConfig?: { adAccountId?: string; accessToken?: string; apiVersion?: string }) {
+  constructor(customConfig?: { adAccountId?: string; accessToken?: string; apiVersion?: string; pageId?: string }) {
     this.adAccountId = customConfig?.adAccountId || process.env.META_AD_ACCOUNT_ID || '';
     // Tự động giải mã token nếu được lưu trữ dạng mã hóa
     const rawToken = customConfig?.accessToken || process.env.META_ACCESS_TOKEN || process.env.FB_PAGE_ACCESS_TOKEN || '';
     this.accessToken = decryptToken(rawToken);
     this.apiVersion = customConfig?.apiVersion || process.env.META_GRAPH_VERSION || 'v21.0';
+    this.pageId = customConfig?.pageId || process.env.FB_PAGE_ID || '';
   }
 
   private mapObjective(obj: string): string {
@@ -123,11 +125,21 @@ export class MetaAdsAdapter implements AdsPlatformAdapter {
       const platformAdSetId = adSetData.id;
 
       // 3. TẠO MẪU QUẢNG CÁO SÁNG TẠO (AD CREATIVE)
-      const pageId = process.env.FB_PAGE_ID || '102938475610293';
+      if (!this.pageId) {
+        return {
+          success: false,
+          status: 'INTEGRATION_ERROR',
+          platformCampaignId,
+          platformAdSetId,
+          isMock: false,
+          error: 'Chưa chọn Fanpage để làm danh tính quảng cáo.',
+          errorStep: 'VALIDATION',
+        };
+      }
       const creativePayload = {
         name: `${input.name} - Creative`,
         object_story_spec: {
-          page_id: pageId,
+          page_id: this.pageId,
           link_data: {
             message: input.primaryText,
             name: input.headline,
@@ -358,5 +370,36 @@ export class MetaAdsAdapter implements AdsPlatformAdapter {
       };
     }
   }
-}
 
+  async getCampaignInsights(platformCampaignId: string, since?: string, until?: string): Promise<PlatformInsightsResult> {
+      try {
+        const params = new URLSearchParams({
+          fields: 'spend,impressions,clicks,ctr,cpc,cpm',
+          date_preset: since || until ? 'maximum' : 'last_7d',
+          access_token: this.accessToken,
+        });
+        if (since) params.set('time_range', JSON.stringify({ since, until: until || new Date().toISOString().slice(0, 10) }));
+
+        const res = await fetch(`https://graph.facebook.com/${this.apiVersion}/${platformCampaignId}/insights?${params}`);
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          return { success: false, error: data.error?.message || 'Không thể đọc chi phí từ Meta.' };
+        }
+
+        const row = Array.isArray(data.data) ? data.data[0] : undefined;
+        return {
+          success: true,
+          spend: Number(row?.spend || 0),
+          impressions: Number(row?.impressions || 0),
+          clicks: Number(row?.clicks || 0),
+          ctr: Number(row?.ctr || 0),
+          cpc: Number(row?.cpc || 0),
+          cpm: Number(row?.cpm || 0),
+          since,
+          until,
+        };
+      } catch (err: any) {
+        return { success: false, error: `Lỗi đọc chi phí Meta: ${err.message}` };
+      }
+  }
+}

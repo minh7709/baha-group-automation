@@ -277,6 +277,28 @@ export default function HomePage() {
     }
   };
 
+  const handleSyncInsights = async (camp: CampaignData) => {
+    try {
+      const res = await fetch('/api/meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'insights',
+          campaignId: camp.id,
+          mode: camp.isMock ? 'MOCK' : 'REAL',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Không thể đọc chi phí từ Meta');
+      }
+      showToast(camp.isMock ? 'Đã đồng bộ số liệu mô phỏng.' : 'Đã đồng bộ chi phí và số liệu từ Meta.');
+      await fetchCampaigns();
+    } catch (err: any) {
+      alert(`Lỗi đồng bộ số liệu: ${err.message}`);
+    }
+  };
+
   const activeDraft = campaigns.find((c) => c.status === 'DRAFT');
 
   return (
@@ -433,6 +455,7 @@ export default function HomePage() {
                   setFacebookTargetCampaign(c);
                   setIsFacebookModalOpen(true);
                 }}
+                onSyncInsights={handleSyncInsights}
               />
             </div>
           </div>
@@ -473,6 +496,7 @@ export default function HomePage() {
               setFacebookTargetCampaign(c);
               setIsFacebookModalOpen(true);
             }}
+            onSyncInsights={handleSyncInsights}
           />
         )}
       </main>

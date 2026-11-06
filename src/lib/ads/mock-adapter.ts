@@ -1,5 +1,5 @@
 import { CampaignData } from '../types';
-import { AdsPlatformAdapter, PlatformCampaignResult, PlatformActionResult, PlatformStatusResult } from './types';
+import { AdsPlatformAdapter, PlatformCampaignResult, PlatformActionResult, PlatformStatusResult, PlatformInsightsResult } from './types';
 
 export class MockAdsAdapter implements AdsPlatformAdapter {
   async createPausedCampaign(input: CampaignData): Promise<PlatformCampaignResult> {
@@ -55,5 +55,17 @@ export class MockAdsAdapter implements AdsPlatformAdapter {
       lastSyncAt: new Date().toISOString(),
     };
   }
-}
 
+  async getCampaignInsights(platformCampaignId: string): Promise<PlatformInsightsResult> {
+    return {
+      success: true,
+      spend: 0,
+      impressions: 0,
+      clicks: 0,
+      ctr: 0,
+      cpc: 0,
+      cpm: 0,
+      error: undefined,
+    };
+  }
+}

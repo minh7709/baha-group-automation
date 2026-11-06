@@ -60,6 +60,20 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({
   const [specialWarning, setSpecialWarning] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [connectedPages, setConnectedPages] = useState<Array<{ pageId: string; pageName: string }>>([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch('/api/pages')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.success) setConnectedPages(data.pages || []);
+      })
+      .catch((err) => console.error('Lỗi tải Fanpage đã kết nối:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Update budget calculations
   const handleBudgetChange = (daily: number, days: number) => {
@@ -333,13 +347,31 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({
                 <label className="block text-xs font-semibold text-gray-300 mb-1">
                   Tên Fanpage hiển thị trên quảng cáo:
                 </label>
-                <input
-                  type="text"
-                  value={formData.pageName || ''}
-                  onChange={(e) => setFormData({ ...formData, pageName: e.target.value })}
-                  placeholder="Ví dụ: Diệu BaHa - Quản Trị Thực Chiến"
-                  className="w-full bg-[#0c0f17] border border-[#273248] rounded-xl p-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
-                />
+                {connectedPages.length > 0 ? (
+                  <select
+                    value={formData.pageId || ''}
+                    onChange={(e) => {
+                      const page = connectedPages.find((item) => item.pageId === e.target.value);
+                      setFormData({
+                        ...formData,
+                        pageId: page?.pageId,
+                        pageName: page?.pageName || formData.pageName,
+                      });
+                    }}
+                    className="w-full bg-[#0c0f17] border border-[#273248] rounded-xl p-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="">-- Chọn Fanpage đã kết nối --</option>
+                    {connectedPages.map((page) => (
+                      <option key={page.pageId} value={page.pageId}>
+                        {page.pageName} ({page.pageId})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="rounded-xl border border-amber-800/60 bg-amber-950/30 p-3 text-xs text-amber-300">
+                    Chưa có Fanpage được kết nối. Hãy kết nối Fanpage trước khi tạo quảng cáo thật.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -825,4 +857,3 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({
     </div>
   );
 };
-

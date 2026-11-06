@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdsAdapter } from '@/lib/ads';
-import { getCampaignById, saveCampaign } from '@/lib/storage';
+import { getCampaignById, saveCampaign, getConnectedPageById } from '@/lib/storage';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { validateCampaignFinancials, validateCampaignRequiredFields } from '@/lib/campaign-policy';
 
@@ -8,9 +8,15 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { action = 'create', campaignId, mode = 'MOCK', botToken, chatId } = body;
+    const requestedCampaign = campaignId ? getCampaignById(campaignId) : body.campaign;
+    const selectedPage = requestedCampaign?.pageId ? getConnectedPageById(requestedCampaign.pageId) : undefined;
+    const adapter = getAdsAdapter(mode, {
+      pageId: selectedPage?.pageId || requestedCampaign?.pageId,
+      adAccountId: requestedCampaign?.adAccountId || process.env.META_AD_ACCOUNT_ID,
+      accessToken: process.env.META_ACCESS_TOKEN,
+    });
 
     const notifier = new NotificationService({ botToken, chatId });
-    const adapter = getAdsAdapter(mode);
 
     // 1. HÀNH ĐỘNG: DỪNG KHẨN CẤP (EMERGENCY KILL SWITCH)
     if (action === 'stop') {
@@ -111,6 +117,32 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: 'Không tìm thấy Meta Campaign ID để đồng bộ.' }, { status: 400 });
       }
 
+      if (action === 'insights') {
+        const targetCampaign = campaignId ? getCampaignById(campaignId) : null;
+        if (!targetCampaign?.metaCampaignId) {
+          return NextResponse.json({ success: false, error: 'Chưa có Meta Campaign ID để đọc chi phí.' }, { status: 400 });
+        }
+        const insights = await adapter.getCampaignInsights(
+          targetCampaign.metaCampaignId,
+          body.since,
+          body.until,
+        );
+        if (!insights.success) {
+          return NextResponse.json({ success: false, error: insights.error }, { status: 502 });
+        }
+        const updated = saveCampaign({
+          ...targetCampaign,
+          metaSpend: insights.spend,
+          metaImpressions: insights.impressions,
+          metaClicks: insights.clicks,
+          metaCtr: insights.ctr,
+          metaCpc: insights.cpc,
+          metaCpm: insights.cpm,
+          metaInsightsAt: new Date().toISOString(),
+        });
+        return NextResponse.json({ success: true, insights, campaign: updated });
+      }
+
       const syncResult = await adapter.getCampaignStatus(targetCampaign.metaCampaignId);
       if (syncResult.success) {
         const updated = saveCampaign({
@@ -137,6 +169,13 @@ export async function POST(req: Request) {
 
     if (!campaign) {
       return NextResponse.json({ success: false, error: 'Không tìm thấy dữ liệu chiến dịch.' }, { status: 400 });
+    }
+
+    if (mode === 'REAL' && !selectedPage) {
+      return NextResponse.json({
+        success: false,
+        error: 'Vui lòng chọn một Fanpage đã kết nối trước khi tạo quảng cáo thật.',
+      }, { status: 400 });
     }
 
     // BẢO VỆ CHÍNH SÁCH BẮT BUỘC: Phải được duyệt nội bộ trước khi tạo trên Meta

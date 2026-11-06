@@ -84,6 +84,8 @@ export async function POST(req: Request) {
       primaryText: body.primaryText || 'Liên hệ ngay để nhận ưu đãi hấp dẫn dành riêng cho bạn!',
       callToAction: body.callToAction || 'SEND_MESSAGE',
       pageName: body.pageName || 'Diệu BaHa - Quản Trị Thực Chiến',
+      pageId: body.pageId,
+      adAccountId: body.adAccountId || process.env.META_AD_ACCOUNT_ID,
       status: initialStatus,
       version: body.version || 1,
       approvalCode: body.approvalCode,

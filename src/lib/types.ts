@@ -46,6 +46,8 @@ export interface CampaignData {
   primaryText: string;
   callToAction: string;       // "SEND_MESSAGE", "GET_OFFER", "LEARN_MORE"
   pageName: string;           // Tên Fanpage đại diện
+  pageId?: string;            // Fanpage khách hàng đã chọn
+  adAccountId?: string;       // Ad Account dùng cho chiến dịch
 
   // Bước 7: Phê duyệt nội bộ & An toàn
   status: CampaignStatus;
@@ -67,6 +69,13 @@ export interface CampaignData {
   // Theo dõi lỗi tích hợp Meta
   lastError?: string;
   errorStep?: string;
+  metaSpend?: number;
+  metaImpressions?: number;
+  metaClicks?: number;
+  metaCtr?: number;
+  metaCpc?: number;
+  metaCpm?: number;
+  metaInsightsAt?: string;
 
   createdAt: string;
   updatedAt: string;

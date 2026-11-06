@@ -19,6 +19,19 @@ export interface PostResult {
   error?: string;
 }
 
+/**
+ * Kiểm tra xem token có phải là token thật của Meta hay chỉ là token mô phỏng (Mock)
+ */
+export function isRealMetaToken(token?: string): boolean {
+  if (!token) return false;
+  const t = token.trim();
+  const lower = t.toLowerCase();
+  if (lower.includes('mock') || lower.includes('test') || lower.startsWith('eaagm0pxqb_mock')) {
+    return false;
+  }
+  return t.startsWith('EAA') && t.length > 50;
+}
+
 export class FacebookService {
   private defaultPageId: string;
   private defaultAccessToken: string;
@@ -43,8 +56,8 @@ export class FacebookService {
     const targetPageId = pageId || this.defaultPageId;
     const targetToken = accessToken || this.defaultAccessToken;
 
-    // Chế độ MÔ PHỎNG AN TOÀN nếu chưa có Page Token thật
-    if (!targetPageId || !targetToken) {
+    // Chế độ MÔ PHỎNG AN TOÀN nếu chưa có Page Token thật hoặc token là mock (chống lỗi Malformed access token)
+    if (!targetPageId || !targetToken || !isRealMetaToken(targetToken)) {
       await new Promise((r) => setTimeout(r, 600)); // Giả lập độ trễ mạng
       const mockPostId = `${targetPageId || '102938475610293'}_${Date.now()}`;
       return {
@@ -53,8 +66,8 @@ export class FacebookService {
         postId: mockPostId,
         postUrl: `https://facebook.com/${mockPostId}`,
         message: scheduledTime
-          ? `[MOCK] Đã lên lịch đăng bài Text thành công vào lúc ${new Date(scheduledTime * 1000).toLocaleString('vi-VN')}!`
-          : '[MOCK] Đã đăng bài viết dạng Text lên Fanpage thành công (Chế độ mô phỏng chuẩn Graph API v21.0)!',
+          ? `[MÔ PHỎNG] Đã lên lịch đăng bài Text thành công vào lúc ${new Date(scheduledTime * 1000).toLocaleString('vi-VN')}!`
+          : '[MÔ PHỎNG] Đã đăng bài viết dạng Text lên Fanpage thành công (Chế độ mô phỏng chuẩn Graph API v21.0)!',
       };
     }
 
@@ -117,8 +130,8 @@ export class FacebookService {
     const targetPageId = pageId || this.defaultPageId;
     const targetToken = accessToken || this.defaultAccessToken;
 
-    // Chế độ MÔ PHỎNG AN TOÀN nếu chưa có Page Token thật
-    if (!targetPageId || !targetToken) {
+    // Chế độ MÔ PHỎNG AN TOÀN nếu chưa có Page Token thật hoặc token là mock (chống lỗi Malformed access token)
+    if (!targetPageId || !targetToken || !isRealMetaToken(targetToken)) {
       await new Promise((r) => setTimeout(r, 700));
       const mockPostId = `${targetPageId || '102938475610293'}_${Date.now()}`;
       return {
@@ -127,8 +140,8 @@ export class FacebookService {
         postId: mockPostId,
         postUrl: `https://facebook.com/${mockPostId}`,
         message: scheduledTime
-          ? `[MOCK] Đã lên lịch đăng ảnh kèm Caption thành công vào lúc ${new Date(scheduledTime * 1000).toLocaleString('vi-VN')}!`
-          : '[MOCK] Đã upload và đăng ảnh kèm Caption lên Fanpage thành công (0đ)!',
+          ? `[MÔ PHỎNG] Đã lên lịch đăng ảnh kèm Caption thành công vào lúc ${new Date(scheduledTime * 1000).toLocaleString('vi-VN')}!`
+          : '[MÔ PHỎNG] Đã upload và đăng ảnh kèm Caption lên Fanpage thành công (0đ)!',
       };
     }
 

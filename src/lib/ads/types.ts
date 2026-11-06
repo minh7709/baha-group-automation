@@ -30,10 +30,23 @@ export interface PlatformStatusResult {
   error?: string;
 }
 
+export interface PlatformInsightsResult {
+  success: boolean;
+  spend?: number;
+  impressions?: number;
+  clicks?: number;
+  ctr?: number;
+  cpc?: number;
+  cpm?: number;
+  since?: string;
+  until?: string;
+  error?: string;
+}
+
 export interface AdsPlatformAdapter {
   createPausedCampaign(input: CampaignData): Promise<PlatformCampaignResult>;
   activateCampaign(platformCampaignId: string): Promise<PlatformActionResult>;
   pauseCampaign(platformCampaignId: string): Promise<PlatformActionResult>;
   getCampaignStatus(platformCampaignId: string): Promise<PlatformStatusResult>;
+  getCampaignInsights(platformCampaignId: string, since?: string, until?: string): Promise<PlatformInsightsResult>;
 }
-

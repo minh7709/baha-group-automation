@@ -33,6 +33,55 @@ Mục tiêu của đợt cải thiện:
 
 ## 3. Các vấn đề cần cải thiện
 
+### 3.0. Lỗi OAuth Meta: `Invalid Scopes`
+
+#### Triệu chứng
+
+Meta có thể trả về:
+
+```text
+Invalid Scopes: email
+Invalid Scopes: email, pages_show_list, pages_read_engagement, pages_manage_posts
+```
+
+#### Nguyên nhân
+
+Route OAuth trước đây luôn gửi `email` cùng với quyền Pages, trong khi quyền này không cần thiết để lấy danh sách Fanpage. Ngoài ra, `pages_*` chỉ hợp lệ khi Meta App đã bật đúng sản phẩm/Use Case và ứng dụng đã được cấu hình quyền tương ứng. Code không thể tự cấp quyền mà chưa được bật trên Meta Developer Dashboard.
+
+#### Cách xử lý đã áp dụng
+
+- OAuth cơ bản chỉ yêu cầu `public_profile`.
+- Quyền Pages và Ads được cấu hình bằng:
+  - `META_OAUTH_PAGES_SCOPES`
+  - `META_OAUTH_ADS_SCOPES`
+  - `META_OAUTH_BASIC_SCOPES`
+- Hỗ trợ `META_OAUTH_CONFIG_ID` khi dùng Facebook Login for Business.
+- Không còn hardcode `email` vào mọi luồng OAuth.
+
+#### Cấu hình Meta Developer Dashboard cần kiểm tra
+
+1. App phải có đúng sản phẩm **Facebook Login** hoặc **Facebook Login for Business**.
+2. `META_REDIRECT_URI` phải trùng tuyệt đối với Valid OAuth Redirect URIs.
+3. Nếu dùng quyền Pages, bật đúng Use Case Pages và yêu cầu các quyền cần thiết.
+4. Nếu app đang ở Development Mode, tài khoản đăng nhập phải là Admin, Developer, Tester hoặc người được cấp vai trò trong App.
+5. Nếu dùng tài khoản người dùng ngoài vai trò của app, các quyền nâng cao phải được App Review phê duyệt.
+6. Nếu dùng Facebook Login for Business, tạo cấu hình quyền và điền `META_OAUTH_CONFIG_ID`.
+7. Không thêm `email` nếu ứng dụng chỉ cần kết nối Fanpage.
+
+#### Luồng kiểm tra tối thiểu
+
+```text
+/api/auth/facebook/login?scope=basic
+  -> chỉ yêu cầu public_profile
+  -> xác nhận OAuth cơ bản hoạt động
+
+/api/auth/facebook/login?scope=pages
+  -> yêu cầu pages_show_list,pages_read_engagement,pages_manage_posts
+  -> chỉ kiểm tra sau khi Use Case Pages đã được bật
+```
+
+Nếu OAuth cơ bản vẫn báo `Invalid Scopes: public_profile`, vấn đề nằm ở cấu hình sản phẩm/App ID hoặc URL OAuth, không còn nằm ở nhóm quyền Pages.
+
 ### 3.1. Backend chưa bảo vệ ngân sách và luồng trạng thái
 
 #### Vấn đề
