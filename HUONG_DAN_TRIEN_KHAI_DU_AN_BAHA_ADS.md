@@ -7,16 +7,6 @@
 
 ---
 
-## ⚠️ CẢNH BÁO QUAN TRỌNG NHẤT TỪ ĐỀ BÀI (DEADLY TRAP)
-
-Trong yêu cầu của bạn có đề cập: *"thiết lập tự động viết bài, lên lịch đăng Fanpage, đăng video, … lên facebook link với tài khoản facebook nếu được... đăng bài vào nhóm hoặc quản lý nội dung mạng xã hội. Đây là tự động đăng nội dung..."*
-
-🚨 **HÃY DỪNG LẠI VÀ ĐỌC KỸ LƯU Ý BẮT BUỘC Ở TRANG 1 CỦA ĐỀ BÀI BAHA GROUP:**
-
-> **LƯU Ý BẮT BUỘC – KHÔNG NHẦM “QUẢNG CÁO TỰ ĐỘNG” VỚI “ĐĂNG BÀI TỰ ĐỘNG”**
-> - **ĐÚNG YÊU CẦU**: Xây dựng quy trình thiết lập chiến dịch **QUẢNG CÁO TRẢ PHÍ (Paid Ads)**: Mục tiêu quảng cáo, đối tượng tiếp cận, khu vực, ngân sách, lịch chạy, nội dung sáng tạo, xem trước (Mockup Ad), phê duyệt nội bộ và trạng thái chiến dịch. Hệ thống hướng tới khả năng kết nối Meta Marketing API.
-> - **KHÔNG ĐÚNG YÊU CẦU**: Website chỉ tự động viết bài, lên lịch đăng Fanpage, đăng video lên YouTube, đăng bài Zalo, đăng bài vào nhóm. Đây là **tự động đăng nội dung (Organic Social Media Management)**, **KHÔNG PHẢI** tự động thiết lập quảng cáo trả phí. Làm sai phần này sẽ bị **ĐÁNH TRƯỢT NGAY LẬP TỨC**.
-
 👉 **Điểm giao thoa chuẩn xác**: 
 Tính năng **AI viết bài** và **chọn Fanpage đại diện** vẫn được sử dụng, nhưng là để phục vụ cho **Nội dung mẫu quảng cáo (Ad Creative: Tiêu đề, Body Copy, Hình ảnh/Video, Nút Kêu Gọi Hành Động CTA)** được phân phối dưới dạng **Sponsored Ads** có ngân sách tiền thật, chứ **không phải** tool auto-post lên group hay trang cá nhân!
 

@@ -1,0 +1,89 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  passwordHash      String
+  name              String
+  role              String     @default("USER") // USER | FOUNDER | ADMIN
+  emailVerified     Boolean    @default(false)
+  verificationToken String?
+  tokenExpiry       DateTime?
+  campaigns         Campaign[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model Campaign {
+  id                String     @id @default(cuid())
+  userId            String?
+  user              User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  code              String     @unique // BaHa-ADS-YYYYMMDD-HHMMSS-XXXX
+  name              String
+  description       String?
+  imageUrl          String?
+  
+  // Bước 2: Mục tiêu
+  objective         String     // MESSAGES | LEAD | TRAFFIC | AWARENESS
+  objectiveText     String
+  specialCategory   String     @default("NONE") // NONE | HOUSING | CREDIT | EMPLOYMENT
+
+  // Bước 3: Khách hàng & Vị trí
+  location          String
+  radiusKm          Int        @default(15)
+  targetAge         String     @default("25 - 45")
+  targetGender      String     @default("FEMALE")
+  targetInterests   String?    // Lưu JSON danh sách sở thích
+
+  // Bước 4: Ngân sách & Thời gian
+  dailyBudget       Float      @default(200000)
+  durationDays      Int        @default(7)
+  totalBudget       Float      @default(1400000)
+  maxEstimatedSpend Float      @default(1750000)
+  startDate         DateTime
+  endDate           DateTime
+
+  // Bước 5: Nội dung sáng tạo
+  headline          String
+  primaryText       String
+  callToAction      String     @default("SEND_MESSAGE")
+  pageName          String     @default("Diệu BaHa - Quản Trị Thực Chiến")
+
+  // Bước 7: Phê duyệt & An toàn
+  status            String     @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED_INTERNAL, CREATED_PAUSED, ACTIVE, STOPPED
+  version           Int        @default(1)
+  approvalCode      String?    // BH-APR-YYYYMMDD-XXXX
+  fingerprint       String?    // a651ab1de86479ab
+  approvedBy        String?
+  approvedAt        DateTime?
+
+  // Bước 8: Meta & Telegram
+  metaCampaignId    String?
+  metaAdSetId       String?
+  metaCreativeId    String?
+  metaAdId          String?
+  isMock            Boolean    @default(true)
+  telegramSent      Boolean    @default(false)
+  telegramSentAt    DateTime?
+
+  auditLogs         AuditLog[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  action     String   // CREATED, APPROVED, META_CREATED, STOPPED, PILOT_ACTIVATED
+  details    String
+  timestamp  DateTime @default(now())
+}
+
