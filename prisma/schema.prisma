@@ -96,6 +96,8 @@ model Campaign {
   primaryText       String
   callToAction      String     @default("SEND_MESSAGE")
   pageName          String     @default("Diệu BaHa - Quản Trị Thực Chiến")
+  pageId            String?
+  facebookPostId    String?
 
   // Bước 7: Phê duyệt & An toàn
   status            String     @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED_INTERNAL, CREATED_PAUSED, ACTIVE, STOPPED, INTEGRATION_ERROR

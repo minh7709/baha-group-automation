@@ -47,6 +47,7 @@ export interface CampaignData {
   callToAction: string;       // "SEND_MESSAGE", "GET_OFFER", "LEARN_MORE"
   pageName: string;           // Tên Fanpage đại diện
   pageId?: string;            // Fanpage khách hàng đã chọn
+  facebookPostId?: string;    // Bài đăng Fanpage được chọn làm nguồn quảng cáo
   adAccountId?: string;       // Ad Account dùng cho chiến dịch
 
   // Bước 7: Phê duyệt nội bộ & An toàn

@@ -85,6 +85,7 @@ export async function POST(req: Request) {
       callToAction: body.callToAction || 'SEND_MESSAGE',
       pageName: body.pageName || 'Diệu BaHa - Quản Trị Thực Chiến',
       pageId: body.pageId,
+      facebookPostId: body.facebookPostId,
       adAccountId: body.adAccountId || process.env.META_AD_ACCOUNT_ID,
       status: initialStatus,
       version: body.version || 1,

@@ -22,7 +22,11 @@ interface PostItem {
   isMock: boolean;
 }
 
-export const FacebookPostsPanel: React.FC = () => {
+interface FacebookPostsPanelProps {
+  onCreateAdDraft?: (campaign: any) => void;
+}
+
+export const FacebookPostsPanel: React.FC<FacebookPostsPanelProps> = ({ onCreateAdDraft }) => {
   const [pages, setPages] = useState<PageItem[]>([]);
   const [pageId, setPageId] = useState('');
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -78,6 +82,21 @@ export const FacebookPostsPanel: React.FC = () => {
     loadPosts(false, nextPageId).catch((error) => setMessage(error.message));
   };
 
+  const createDraftFromPost = async (post: PostItem) => {
+    try {
+      const response = await fetch('/api/campaigns/from-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, pageId: post.pageId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Không thể tạo bản nháp quảng cáo.');
+      onCreateAdDraft?.(data.campaign);
+    } catch (error: any) {
+      setMessage(error.message);
+    }
+  };
+
   return (
     <section className="w-full bg-[#131722] border border-[#232b3d] rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -113,6 +132,9 @@ export const FacebookPostsPanel: React.FC = () => {
                   <span><MessageCircle className="inline w-3 h-3 mr-1" />{post.comments}</span>
                   <span><Share2 className="inline w-3 h-3 mr-1" />{post.shares}</span>
                 </div>
+                <button type="button" onClick={() => createDraftFromPost(post)} className="w-full mt-2 py-2 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold hover:bg-emerald-900">
+                  Chọn bài này để tạo quảng cáo
+                </button>
               </div>
             </article>
           ))}

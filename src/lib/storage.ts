@@ -155,6 +155,52 @@ export function getCampaignById(id: string): CampaignData | undefined {
   return campaigns.find((c) => c.id === id || c.code === id);
 }
 
+export async function getCampaignByIdAsync(id: string): Promise<CampaignData | undefined> {
+  const prisma = getPrisma();
+  if (prisma) {
+    try {
+      const campaign = await prisma.campaign.findFirst({
+        where: { OR: [{ id }, { code: id }] },
+      });
+      if (campaign) {
+        return {
+          ...campaign,
+          description: campaign.description || '',
+          imageUrl: campaign.imageUrl || undefined,
+          objective: campaign.objective as CampaignData['objective'],
+          specialCategory: campaign.specialCategory as CampaignData['specialCategory'],
+          targetInterests: campaign.targetInterests ? JSON.parse(campaign.targetInterests) : [],
+          targetGender: campaign.targetGender as CampaignData['targetGender'],
+          callToAction: campaign.callToAction,
+          status: campaign.status as CampaignData['status'],
+          startDate: campaign.startDate.toISOString(),
+          endDate: campaign.endDate.toISOString(),
+          pageId: campaign.pageId || undefined,
+          facebookPostId: campaign.facebookPostId || undefined,
+          adAccountId: undefined,
+          approvalCode: campaign.approvalCode || undefined,
+          fingerprint: campaign.fingerprint || undefined,
+          approvedBy: campaign.approvedBy || undefined,
+          approvedAt: campaign.approvedAt?.toISOString(),
+          metaCampaignId: campaign.metaCampaignId || undefined,
+          metaAdSetId: campaign.metaAdSetId || undefined,
+          metaCreativeId: campaign.metaCreativeId || undefined,
+          metaAdId: campaign.metaAdId || undefined,
+          telegramSentAt: campaign.telegramSentAt?.toISOString(),
+          lastError: campaign.lastError || undefined,
+          errorStep: campaign.errorStep || undefined,
+          metaInsightsAt: undefined,
+          createdAt: campaign.createdAt.toISOString(),
+          updatedAt: campaign.updatedAt.toISOString(),
+        };
+      }
+    } catch (error: any) {
+      console.warn('Không đọc được Campaign từ Prisma, dùng JSON fallback:', error.message);
+    }
+  }
+  return getCampaignById(id);
+}
+
 export function saveCampaign(campaign: CampaignData): CampaignData {
   ensureDataFiles();
   const campaigns = getAllCampaigns();
@@ -196,6 +242,8 @@ export function saveCampaign(campaign: CampaignData): CampaignData {
         primaryText: campaign.primaryText,
         callToAction: campaign.callToAction || 'SEND_MESSAGE',
         pageName: campaign.pageName,
+        pageId: campaign.pageId || null,
+        facebookPostId: campaign.facebookPostId || null,
         status: campaign.status,
         version: Number(campaign.version || 1),
         approvalCode: campaign.approvalCode || null,
@@ -234,6 +282,8 @@ export function saveCampaign(campaign: CampaignData): CampaignData {
         primaryText: campaign.primaryText,
         callToAction: campaign.callToAction || 'SEND_MESSAGE',
         pageName: campaign.pageName,
+        pageId: campaign.pageId || null,
+        facebookPostId: campaign.facebookPostId || null,
         status: campaign.status,
         version: Number(campaign.version || 1),
         approvalCode: campaign.approvalCode || null,

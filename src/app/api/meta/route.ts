@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdsAdapter } from '@/lib/ads';
-import { getCampaignById, saveCampaign, getConnectedPageById } from '@/lib/storage';
+import { getCampaignByIdAsync, saveCampaign, getConnectedPageByIdAsync } from '@/lib/storage';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { validateCampaignFinancials, validateCampaignRequiredFields } from '@/lib/campaign-policy';
 
@@ -8,8 +8,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { action = 'create', campaignId, mode = 'MOCK', botToken, chatId } = body;
-    const requestedCampaign = campaignId ? getCampaignById(campaignId) : body.campaign;
-    const selectedPage = requestedCampaign?.pageId ? getConnectedPageById(requestedCampaign.pageId) : undefined;
+    const requestedCampaign = campaignId ? await getCampaignByIdAsync(campaignId) : body.campaign;
+    const selectedPage = requestedCampaign?.pageId ? await getConnectedPageByIdAsync(requestedCampaign.pageId) : undefined;
     const adapter = getAdsAdapter(mode, {
       pageId: selectedPage?.pageId || requestedCampaign?.pageId,
       adAccountId: requestedCampaign?.adAccountId || process.env.META_AD_ACCOUNT_ID,
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     // 1. HÀNH ĐỘNG: DỪNG KHẨN CẤP (EMERGENCY KILL SWITCH)
     if (action === 'stop') {
-      const targetCampaign = campaignId ? getCampaignById(campaignId) : null;
+      const targetCampaign = campaignId ? await getCampaignByIdAsync(campaignId) : null;
       const metaId = body.metaCampaignId || targetCampaign?.metaCampaignId;
 
       if (!metaId) {
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
     // 2. HÀNH ĐỘNG: KÍCH HOẠT CHIẾN DỊCH (PILOT GATE ACTIVATION)
     if (action === 'activate') {
-      const targetCampaign = campaignId ? getCampaignById(campaignId) : null;
+      const targetCampaign = campaignId ? await getCampaignByIdAsync(campaignId) : null;
       if (!targetCampaign) {
         return NextResponse.json({ success: false, error: 'Không tìm thấy chiến dịch để kích hoạt.' }, { status: 404 });
       }
@@ -112,13 +112,13 @@ export async function POST(req: Request) {
 
     // 3. HÀNH ĐỘNG: ĐỒNG BỘ TRẠNG THÁI THỜI GIAN THỰC TỪ META (STATUS SYNC)
     if (action === 'sync') {
-      const targetCampaign = campaignId ? getCampaignById(campaignId) : null;
+      const targetCampaign = campaignId ? await getCampaignByIdAsync(campaignId) : null;
       if (!targetCampaign || !targetCampaign.metaCampaignId) {
         return NextResponse.json({ success: false, error: 'Không tìm thấy Meta Campaign ID để đồng bộ.' }, { status: 400 });
       }
 
       if (action === 'insights') {
-        const targetCampaign = campaignId ? getCampaignById(campaignId) : null;
+        const targetCampaign = campaignId ? await getCampaignByIdAsync(campaignId) : null;
         if (!targetCampaign?.metaCampaignId) {
           return NextResponse.json({ success: false, error: 'Chưa có Meta Campaign ID để đọc chi phí.' }, { status: 400 });
         }
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
     // 4. HÀNH ĐỘNG: TẠO CHIẾN DỊCH TRÊN META (LUÔN TẠM DỪNG - CREATED_PAUSED)
     let campaign = body.campaign;
     if (campaignId) {
-      campaign = getCampaignById(campaignId);
+      campaign = await getCampaignByIdAsync(campaignId);
     }
 
     if (!campaign) {

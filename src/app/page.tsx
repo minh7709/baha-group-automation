@@ -422,7 +422,13 @@ export default function HomePage() {
               otherDraftsCount={Math.max(0, campaigns.filter((c) => c.status === 'DRAFT').length - 1)}
             />
 
-            <FacebookPostsPanel />
+            <FacebookPostsPanel
+              onCreateAdDraft={(campaign) => {
+                setSelectedCampaign(campaign);
+                setView('wizard');
+                showToast('Đã tạo bản nháp từ bài đăng. Hãy xem lại và phê duyệt trước khi gửi lên Meta.');
+              }}
+            />
             <FacebookProfilePostsPanel />
 
             {/* Recent Campaigns Overview */}

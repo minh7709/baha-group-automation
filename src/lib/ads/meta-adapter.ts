@@ -138,18 +138,21 @@ export class MetaAdsAdapter implements AdsPlatformAdapter {
       }
       const creativePayload = {
         name: `${input.name} - Creative`,
-        object_story_spec: {
-          page_id: this.pageId,
-          link_data: {
-            message: input.primaryText,
-            name: input.headline,
-            link: 'https://bahagroup.vn',
-            picture: input.imageUrl || 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=80',
-            call_to_action: {
-              type: input.callToAction || 'LEARN_MORE',
+        object_story_id: input.facebookPostId || undefined,
+        ...(input.facebookPostId ? {} : {
+          object_story_spec: {
+            page_id: this.pageId,
+            link_data: {
+              message: input.primaryText,
+              name: input.headline,
+              link: 'https://bahagroup.vn',
+              picture: input.imageUrl || 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=80',
+              call_to_action: {
+                type: input.callToAction || 'LEARN_MORE',
+              },
             },
           },
-        },
+        }),
         access_token: this.accessToken,
       };
 
